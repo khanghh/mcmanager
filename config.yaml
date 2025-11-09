@@ -1,0 +1,8 @@
+debug: false
+staticDir: "./static"
+listenAddr: ":8080"
+servers:
+  - name: skyblock
+    url: "http://localhost:8080"
+  - name: bedwars
+    url: "http://localhost:8081"

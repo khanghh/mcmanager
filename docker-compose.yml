@@ -1,0 +1,15 @@
+services:
+  mcmanger:
+    image: mcmanger
+    container_name: mcmanger
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: 1000:1000
+    volumes:
+      - ./:/workdir
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    ports:
+      - "8080:8080"
+    network_mode: bridge

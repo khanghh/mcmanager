@@ -1,0 +1,13 @@
+services:
+  dev:
+    image: mcrunner-dev
+    container_name: mcrunner-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    user: 1000:1000
+    volumes:
+      - ..:/workdir
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    network_mode: bridge
