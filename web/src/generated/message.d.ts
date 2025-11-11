@@ -4,9 +4,20 @@ import Long = require("long");
 export enum MessageType {
     UNKNOWN = 0,
     ERROR = 1,
-    PTY_BUFFER = 101,
-    PTY_INPUT = 102,
-    PTY_RESIZE = 103
+    PTY_INPUT = 101,
+    PTY_OUTPUT = 102,
+    PTY_RESIZE = 103,
+    SERVER_START = 104,
+    SERVER_STOP = 105,
+    SERVER_KILL = 106,
+    SERVER_STATUS = 107
+}
+
+/** ServerState enum. */
+export enum ServerState {
+    STOPPED = 0,
+    RUNNING = 1,
+    STOPPING = 2
 }
 
 /** Represents a Message. */
@@ -22,19 +33,19 @@ export class Message implements IMessage {
     public type: MessageType;
 
     /** Message error. */
-    public error: string;
+    public error?: (IErrorInfo|null);
 
     /** Message ptyBuffer. */
     public ptyBuffer?: (IPtyBuffer|null);
 
-    /** Message ptyInput. */
-    public ptyInput?: (IPtyInput|null);
-
     /** Message ptyResize. */
     public ptyResize?: (IPtyResize|null);
 
+    /** Message serverStatus. */
+    public serverStatus?: (IServerStatus|null);
+
     /** Message payload. */
-    public payload?: ("ptyBuffer"|"ptyInput"|"ptyResize");
+    public payload?: ("error"|"ptyBuffer"|"ptyResize"|"serverStatus");
 
     /**
      * Creates a new Message instance using the specified properties.
@@ -123,9 +134,6 @@ export class PtyBuffer implements IPtyBuffer {
      */
     constructor(properties?: IPtyBuffer);
 
-    /** PtyBuffer sessionId. */
-    public sessionId: string;
-
     /** PtyBuffer data. */
     public data: Uint8Array;
 
@@ -207,99 +215,6 @@ export class PtyBuffer implements IPtyBuffer {
     public static getTypeUrl(typeUrlPrefix?: string): string;
 }
 
-/** Represents a PtyInput. */
-export class PtyInput implements IPtyInput {
-
-    /**
-     * Constructs a new PtyInput.
-     * @param [properties] Properties to set
-     */
-    constructor(properties?: IPtyInput);
-
-    /** PtyInput sessionId. */
-    public sessionId: string;
-
-    /** PtyInput data. */
-    public data: Uint8Array;
-
-    /**
-     * Creates a new PtyInput instance using the specified properties.
-     * @param [properties] Properties to set
-     * @returns PtyInput instance
-     */
-    public static create(properties?: IPtyInput): PtyInput;
-
-    /**
-     * Encodes the specified PtyInput message. Does not implicitly {@link PtyInput.verify|verify} messages.
-     * @param message PtyInput message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encode(message: IPtyInput, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Encodes the specified PtyInput message, length delimited. Does not implicitly {@link PtyInput.verify|verify} messages.
-     * @param message PtyInput message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encodeDelimited(message: IPtyInput, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Decodes a PtyInput message from the specified reader or buffer.
-     * @param reader Reader or buffer to decode from
-     * @param [length] Message length if known beforehand
-     * @returns PtyInput
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): PtyInput;
-
-    /**
-     * Decodes a PtyInput message from the specified reader or buffer, length delimited.
-     * @param reader Reader or buffer to decode from
-     * @returns PtyInput
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): PtyInput;
-
-    /**
-     * Verifies a PtyInput message.
-     * @param message Plain object to verify
-     * @returns `null` if valid, otherwise the reason why it is not
-     */
-    public static verify(message: { [k: string]: any }): (string|null);
-
-    /**
-     * Creates a PtyInput message from a plain object. Also converts values to their respective internal types.
-     * @param object Plain object
-     * @returns PtyInput
-     */
-    public static fromObject(object: { [k: string]: any }): PtyInput;
-
-    /**
-     * Creates a plain object from a PtyInput message. Also converts values to other types if specified.
-     * @param message PtyInput
-     * @param [options] Conversion options
-     * @returns Plain object
-     */
-    public static toObject(message: PtyInput, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-    /**
-     * Converts this PtyInput to JSON.
-     * @returns JSON object
-     */
-    public toJSON(): { [k: string]: any };
-
-    /**
-     * Gets the default type url for PtyInput
-     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-     * @returns The default type url
-     */
-    public static getTypeUrl(typeUrlPrefix?: string): string;
-}
-
 /** Represents a PtyResize. */
 export class PtyResize implements IPtyResize {
 
@@ -308,9 +223,6 @@ export class PtyResize implements IPtyResize {
      * @param [properties] Properties to set
      */
     constructor(properties?: IPtyResize);
-
-    /** PtyResize sessionId. */
-    public sessionId: string;
 
     /** PtyResize cols. */
     public cols: number;
@@ -390,6 +302,201 @@ export class PtyResize implements IPtyResize {
 
     /**
      * Gets the default type url for PtyResize
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents a ServerStatus. */
+export class ServerStatus implements IServerStatus {
+
+    /**
+     * Constructs a new ServerStatus.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: IServerStatus);
+
+    /** ServerStatus state. */
+    public state: ServerState;
+
+    /** ServerStatus pid. */
+    public pid: number;
+
+    /** ServerStatus uptime. */
+    public uptime: (number|Long);
+
+    /** ServerStatus players. */
+    public players: (number|Long);
+
+    /** ServerStatus version. */
+    public version: string;
+
+    /**
+     * Creates a new ServerStatus instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns ServerStatus instance
+     */
+    public static create(properties?: IServerStatus): ServerStatus;
+
+    /**
+     * Encodes the specified ServerStatus message. Does not implicitly {@link ServerStatus.verify|verify} messages.
+     * @param message ServerStatus message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: IServerStatus, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified ServerStatus message, length delimited. Does not implicitly {@link ServerStatus.verify|verify} messages.
+     * @param message ServerStatus message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: IServerStatus, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a ServerStatus message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns ServerStatus
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): ServerStatus;
+
+    /**
+     * Decodes a ServerStatus message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns ServerStatus
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): ServerStatus;
+
+    /**
+     * Verifies a ServerStatus message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a ServerStatus message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns ServerStatus
+     */
+    public static fromObject(object: { [k: string]: any }): ServerStatus;
+
+    /**
+     * Creates a plain object from a ServerStatus message. Also converts values to other types if specified.
+     * @param message ServerStatus
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: ServerStatus, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this ServerStatus to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for ServerStatus
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents an ErrorInfo. */
+export class ErrorInfo implements IErrorInfo {
+
+    /**
+     * Constructs a new ErrorInfo.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: IErrorInfo);
+
+    /** ErrorInfo code. */
+    public code: string;
+
+    /** ErrorInfo message. */
+    public message: string;
+
+    /**
+     * Creates a new ErrorInfo instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns ErrorInfo instance
+     */
+    public static create(properties?: IErrorInfo): ErrorInfo;
+
+    /**
+     * Encodes the specified ErrorInfo message. Does not implicitly {@link ErrorInfo.verify|verify} messages.
+     * @param message ErrorInfo message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: IErrorInfo, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified ErrorInfo message, length delimited. Does not implicitly {@link ErrorInfo.verify|verify} messages.
+     * @param message ErrorInfo message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: IErrorInfo, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes an ErrorInfo message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns ErrorInfo
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): ErrorInfo;
+
+    /**
+     * Decodes an ErrorInfo message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns ErrorInfo
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): ErrorInfo;
+
+    /**
+     * Verifies an ErrorInfo message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates an ErrorInfo message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns ErrorInfo
+     */
+    public static fromObject(object: { [k: string]: any }): ErrorInfo;
+
+    /**
+     * Creates a plain object from an ErrorInfo message. Also converts values to other types if specified.
+     * @param message ErrorInfo
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: ErrorInfo, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this ErrorInfo to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for ErrorInfo
      * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
      * @returns The default type url
      */

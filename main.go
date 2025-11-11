@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/khanghh/mcmanager/internal/params"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/template/html/v2"
 	"github.com/urfave/cli/v2"
 )
 
@@ -72,6 +75,14 @@ func run(cli *cli.Context) error {
 	if apiURL == "" {
 		return fmt.Errorf("apiurl cannot be empty")
 	}
+	htmlEngine := html.NewFileSystem(http.Dir(staticDir), ".html")
+	config := fiber.Map{
+		"apiURL": apiURL,
+	}
+	configStr, _ := json.Marshal(config)
+	renderVars := fiber.Map{
+		"config": string(configStr),
+	}
 
 	router := fiber.New(fiber.Config{
 		CaseSensitive: true,
@@ -79,9 +90,13 @@ func run(cli *cli.Context) error {
 		IdleTimeout:   params.ServerIdleTimeout,
 		ReadTimeout:   params.ServerReadTimeout,
 		WriteTimeout:  params.ServerWriteTimeout,
+		Views:         htmlEngine,
 	})
-	router.Use(logger.New())
 
+	router.Use(logger.New())
+	router.Get("/", func(ctx *fiber.Ctx) error {
+		return ctx.Render("index", renderVars)
+	})
 	router.Static("/", staticDir)
 
 	return router.Listen(listenAddr)

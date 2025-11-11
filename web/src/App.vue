@@ -1,10 +1,16 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import Header from './components/Header.vue'
 import Tabs from './components/Tabs.vue'
 import ServerConsole from './components/ServerConsole.vue'
 
-const activeTab = ref('code-editor')
+const activeTab = ref(localStorage.getItem('activeTab') || 'code-editor')
+
+// Save active tab to localStorage when it changes
+watch(activeTab, (newTab) => {
+  localStorage.setItem('activeTab', newTab)
+})
+
 </script>
 
 <template>

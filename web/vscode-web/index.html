@@ -41,54 +41,74 @@
     const messageChannel = new MessageChannel();
     const messagePorts = new Map();
     messagePorts.set("remotefs", messageChannel.port2);
-
-    require(["vs/workbench/workbench.web.main"], (workbench) => {
-      workbench.create(document.getElementById("root"), {
-        productConfiguration: {
-          extensionEnabledApiProposals: {
-            "khanghh.remotefs": [
-              "fileSearchProvider",
-              "textSearchProvider",
-              "ipc"
-            ],
-          },
-          nameShort: "VS Code for Web",
-          nameLong: "Visual Studio Code for Web",
-          applicationName: "code-web",
-          dataFolderName: ".vscode-web",
-          version: "1.75.0",
-          extensionsGallery: {
-            serviceUrl: "https://open-vsx.org/vscode/gallery",
-            itemUrl: "https://open-vsx.org/vscode/item",
-            resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
-          },
-        },
-        configurationDefaults: {
+    fetch('/config.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to load config: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(config => {
+        console.log('Loaded configuration:', config.vscodeSettings);
+        initializeVSCode(config.vscodeSettings);
+      })
+      .catch(error => {
+        console.error('Failed to load configuration, using defaults:', error);
+        // Use default configuration if loading fails
+        const vscodeSettings = {
           "files.autoSave": "off",
           "workbench.colorTheme": "Default Dark+",
-        },
-        additionalBuiltinExtensions: [
-          workbench.URI.from({
-            scheme: window.location.protocol === "http:" ? "http" : "https",
-            path: "/vscode/extensions/remotefs",
-          })
-        ],
-        workspaceProvider: {
-          workspace: {
-            folderUri: workbench.URI.from({
-              path: "/",
-              scheme: "remotefs"
-            })
-          },
-          trusted: true
-        },
-        messagePorts: messagePorts,
+          "remotefs.serverURL": "http://localhost:3000/api/fs"
+        };
+        initializeVSCode(vscodeSettings);
       });
 
-      messageChannel.port1.onmessage = (event) => {
-        console.log("Received message from remotefs extension:", event.data);
-      };
-    });
+    function initializeVSCode(vscodeSettings) {
+      require(["vs/workbench/workbench.web.main"], (workbench) => {
+        workbench.create(document.getElementById("root"), {
+          productConfiguration: {
+            extensionEnabledApiProposals: {
+              "khanghh.remotefs": [
+                "fileSearchProvider",
+                "textSearchProvider",
+                "ipc"
+              ],
+            },
+            nameShort: "VS Code for Web",
+            nameLong: "Visual Studio Code for Web",
+            applicationName: "code-web",
+            dataFolderName: ".vscode-web",
+            version: "1.75.0",
+            extensionsGallery: {
+              serviceUrl: "https://open-vsx.org/vscode/gallery",
+              itemUrl: "https://open-vsx.org/vscode/item",
+              resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+            },
+          },
+          configurationDefaults: vscodeSettings,
+          additionalBuiltinExtensions: [
+            workbench.URI.from({
+              scheme: window.location.protocol === "http:" ? "http" : "https",
+              path: "/vscode/extensions/remotefs",
+            })
+          ],
+          workspaceProvider: {
+            workspace: {
+              folderUri: workbench.URI.from({
+                path: "/",
+                scheme: "remotefs"
+              })
+            },
+            trusted: true
+          },
+          messagePorts: messagePorts,
+        });
+
+        messageChannel.port1.onmessage = (event) => {
+          console.log("Received message from remotefs extension:", event.data);
+        };
+      });
+    }
 
   </script>
 </body>

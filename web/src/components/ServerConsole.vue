@@ -1,92 +1,117 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, inject } from 'vue'
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { Message, MessageType, PtyBuffer } from '@/generated/message.js';
+import { useWebsocket } from '@/composables/useWebsocket';
+import axios from 'axios'
+import { useConfig } from '@/composables/useConfig';
+import { useToast } from '@/composables/useToast';
 
-import { Message, MessageType, PtyBuffer, PtyInput, PtyResize } from '@/generated/message.js';
-
-const wsUrl = 'ws://172.17.0.3:3000/ws'; // will be set in connectWebSocket
 const terminalContainer = ref(null);
 let term = null;
 let fitAddon = null;
 let resizeObserver = null;
-let ws = null;
+const encoder = new TextEncoder();
+const config = useConfig()
+const apiURL = config.value.apiURL
 
-function connectWebSocket() {
-  console.log('Connecting to:', wsUrl);
-  ws = new WebSocket(wsUrl);
+// Use WebSocket composable
+const ws = useWebsocket()
+const { status } = inject('serverStatus')
+const isBusy = ref(false)
+const isKilling = ref(false)
+const toast = useToast()
 
-  ws.onopen = () => {
-    console.log('WebSocket connected');
-    term.clear();
-    sendResize();
-  };
-
-  ws.onmessage = async (ev) => {
-    const data = await ev.data.arrayBuffer();
-    let msg = Message.decode(new Uint8Array(data));
-    if (msg.type === MessageType.PTY_BUFFER) {
-      const ptyBuffer = msg.ptyBuffer;
-      if (ptyBuffer) {
-        term.write(ptyBuffer.data);
-      }
-    } else if (msg.type === MessageType.ERROR) {
-      alert('Server error:', msg.error);
-    }
-  };
-
-  ws.onclose = () => {
-    console.log('WebSocket disconnected, reconnecting...');
-    setTimeout(connectWebSocket, 1000);
-  };
-
-  ws.onerror = () => {
-    console.log('WebSocket error');
-  };
-}
-
-function sendResize() {
-  if (!ws || ws.readyState !== WebSocket.OPEN || !term || !fitAddon) return;
-
-  try {
-    fitAddon.fit();
-  } catch (e) {
-    console.error('Fit error:', e);
-  }
-
-  const cols = term.cols || 80;
-  const rows = term.rows || 24;
-  const msg = Message.create({
-    type: MessageType.PTY_RESIZE,
-    ptyResize: PtyResize.create({ cols, rows })
-  });
-  ws.send(Message.encode(msg).finish());
-  console.log(`Terminal resized to ${cols}x${rows}`);
-}
+const isServerStopped = computed(() => status.value.state === 'stopped')
 
 function sendInput(data) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  if (!ws.isConnected.value) return;
   const msg = Message.create({
     type: MessageType.PTY_INPUT,
-    ptyInput: PtyInput.create({ data })
+    ptyBuffer: PtyBuffer.create({ data })
   });
-  ws.send(Message.encode(msg).finish());
+  ws.send(msg);
 }
 
-const clearLogs = () => {
+function clearLogs() {
   if (term) {
     term.clear();
     fitAddon.fit();
   }
 };
 
-const restartServer = () => {
-  // TODO: Implement server restart logic
-  console.log('Restart server');
-};
+async function startServer() {
+  if (isBusy.value) return
+  isBusy.value = true
+  try {
+    await axios.post(apiURL + '/api/mc/start')
+    toast.success('Server started successfully')
+  } catch (err) {
+    toast.error('Failed to start server')
+  } finally {
+    isBusy.value = false
+  }
+}
+
+async function stopServer() {
+  if (isBusy.value) return
+  isBusy.value = true
+  try {
+    await axios.post(apiURL +'/api/mc/stop')
+    toast.success('Server stopped successfully')
+  } catch (err) {
+    toast.error('Failed to stop server')
+  } finally {
+    isBusy.value = false
+  }
+}
+
+async function killServer() {
+  if (isKilling.value) return
+  isKilling.value = true
+  try {
+    await axios.post(apiURL +'/api/mc/kill')
+    toast.success('Server killed successfully')
+  } catch (err) {
+    toast.error('Failed to kill server')
+  } finally {
+    isKilling.value = false
+  }
+}
+
+async function restartServer() {
+  if (isKilling.value) return
+  isKilling.value = true
+  try {
+    await axios.post(apiURL + '/api/mc/restart')
+  } catch (err) {
+    alert('Failed to restart server')
+  } finally {
+    isKilling.value = false
+  }
+}
 
 onMounted(() => {
+  // Set up event listeners for WebSocket messages
+  ws.on(MessageType.PTY_OUTPUT, (msg) => {
+    if (msg.ptyBuffer && term) {
+      term.write(msg.ptyBuffer.data);
+    }
+  });
+
+  ws.on(MessageType.ERROR, (msg) => {
+    toast.error('WebSocket error: ' + msg.error.message);
+  });
+
+  // Clear terminal when WebSocket connects
+  const unsubscribeConnected = ws.on('connected', () => {
+    if (term) {
+      term.clear();
+    }
+  });
+
   term = new Terminal({
     convertEol: true,
     cursorBlink: true,
@@ -101,26 +126,20 @@ onMounted(() => {
 
   // Fit terminal and setup resize observer
   resizeObserver = new ResizeObserver(() => {
-    sendResize();
+    fitAddon.fit();
   });
   resizeObserver.observe(terminalContainer.value);
   fitAddon.fit();
 
   // Connect terminal input to WebSocket
   term.onData((data) => {
-    sendInput(data);
+    sendInput(encoder.encode(data));
   });
-
-  // Connect WebSocket
-  connectWebSocket();
 });
 
 onBeforeUnmount(() => {
   if (resizeObserver) {
     resizeObserver.disconnect();
-  }
-  if (ws) {
-    ws.close();
   }
   if (term) {
     term.dispose();
@@ -138,23 +157,44 @@ onBeforeUnmount(() => {
         <span>Server Console</span>
       </div>
       <div class="terminal-controls flex gap-2.5">
+
         <button
-          class="btn btn-clear px-4 py-2 border-none rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm bg-secondary text-white hover:bg-[#2c4a6b] hover:-translate-y-0.5"
-          @click="clearLogs">
-          <Trash2Icon class="w-4 h-4" />
-          <span>Clear</span>
-        </button>
-        <button
-          class="btn btn-stop px-4 py-2 border-none rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm bg-secondary text-white hover:bg-[#2c4a6b] hover:-translate-y-0.5"
+          v-if="!isServerStopped"
+          class="btn btn-stop px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm text-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isBusy"
           @click="stopServer">
-          <SquareIcon class="w-4 h-4" />
+          <SquareIcon class="w-4 h-4 lucide-solid" />
           <span>Stop</span>
         </button>
         <button
-          class="btn btn-restart px-4 py-2 border-none rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm bg-secondary text-white hover:bg-[#2c4a6b] hover:-translate-y-0.5"
+          v-else
+          class="btn btn-start px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm text-green-600 hover:bg-green-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isBusy"
+          @click="startServer">
+          <PlayIcon class="w-4 h-4 lucide-solid" />
+          <span>Start</span>
+        </button>
+        <button
+          v-if="!isServerStopped"
+          class="btn btn-stop px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm text-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isKilling"
+          @click="killServer">
+          <XIcon class="w-4 h-4" />
+          <span>Kill</span>
+        </button>
+        <button
+          v-if="!isServerStopped"
+          class="btn btn-restart px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm bg-secondary text-white hover:bg-[#2c4a6b]"
+          :disabled="isBusy"
           @click="restartServer">
           <RotateCcwIcon class="w-4 h-4" />
           <span>Restart</span>
+        </button>
+        <button
+          class="btn btn-clear px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-all font-medium text-sm bg-secondary text-white hover:bg-[#2c4a6b]"
+          @click="clearLogs">
+          <Trash2Icon class="w-4 h-4" />
+          <span>Clear</span>
         </button>
       </div>
     </div>
@@ -184,5 +224,12 @@ onBeforeUnmount(() => {
 .terminal-container .xterm-text-layer,
 .terminal-container .xterm-viewport {
   height: 100% !important;
+}
+
+/* Make Lucide icons appear solid/filled */
+.lucide-solid {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 0;
 }
 </style>

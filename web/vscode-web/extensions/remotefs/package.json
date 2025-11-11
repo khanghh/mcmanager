@@ -20,12 +20,16 @@
     "vscode": "^1.75.0"
   },
   "contributes": {
-    "commands": [
-      {
-        "command": "remotefs.helloWorld",
-        "title": "Hello World"
+    "configuration": {
+      "title": "RemoteFS",
+      "properties": {
+        "remotefs.serverURL": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "Specifies the RemoteFS server API URL used to load files into the workbench."
+        }
       }
-    ]
+    }
   },
   "license": "MIT",
   "scripts": {

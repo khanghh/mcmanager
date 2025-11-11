@@ -1,7 +1,7 @@
 services:
   dev:
-    image: mcrunner-dev
-    container_name: mcrunner-dev
+    image: mcmanager-dev
+    container_name: mcmanager-dev
     build:
       context: .
       dockerfile: Dockerfile.dev
