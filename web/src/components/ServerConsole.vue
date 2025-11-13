@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, inject } from 'vue'
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -10,16 +10,16 @@ import { useConfig } from '@/composables/useConfig';
 import { useToast } from '@/composables/useToast';
 
 const terminalContainer = ref(null);
-let term = null;
-let fitAddon = null;
-let resizeObserver = null;
+let term: Terminal | null = null;
+let fitAddon: FitAddon | null = null;
+let resizeObserver: ResizeObserver | null = null;
 const encoder = new TextEncoder();
 const config = useConfig()
 const apiURL = config.value.apiURL
 
 // Use WebSocket composable
 const ws = useWebsocket()
-const { status } = inject('serverStatus')
+const { status } = inject('serverStatus', { status: ref({ state: 'stopped' }) })
 const isBusy = ref(false)
 const isKilling = ref(false)
 const toast = useToast()
@@ -49,7 +49,7 @@ async function startServer() {
     await axios.post(apiURL + '/api/mc/start')
     toast.success('Server started successfully')
   } catch (err) {
-    toast.error('Failed to start server')
+    toast.error(`Failed to start server: ${err.response?.data?.message || err.message}`)
   } finally {
     isBusy.value = false
   }
@@ -62,7 +62,7 @@ async function stopServer() {
     await axios.post(apiURL +'/api/mc/stop')
     toast.success('Server stopped successfully')
   } catch (err) {
-    toast.error('Failed to stop server')
+    toast.error(`Failed to stop server: ${err.response?.data?.message || err.message}`)
   } finally {
     isBusy.value = false
   }
@@ -75,7 +75,7 @@ async function killServer() {
     await axios.post(apiURL +'/api/mc/kill')
     toast.success('Server killed successfully')
   } catch (err) {
-    toast.error('Failed to kill server')
+    toast.error(`Failed to kill server: ${err.response?.data?.message || err.message}`)
   } finally {
     isKilling.value = false
   }
@@ -86,8 +86,9 @@ async function restartServer() {
   isKilling.value = true
   try {
     await axios.post(apiURL + '/api/mc/restart')
+    toast.success('Server restarted successfully')
   } catch (err) {
-    alert('Failed to restart server')
+    toast.error(`Failed to restart server: ${err.response?.data?.message || err.message}`)
   } finally {
     isKilling.value = false
   }
@@ -103,13 +104,6 @@ onMounted(() => {
 
   ws.on(MessageType.ERROR, (msg) => {
     toast.error('WebSocket error: ' + msg.error.message);
-  });
-
-  // Clear terminal when WebSocket connects
-  const unsubscribeConnected = ws.on('connected', () => {
-    if (term) {
-      term.clear();
-    }
   });
 
   term = new Terminal({

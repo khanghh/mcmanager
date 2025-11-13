@@ -3,8 +3,10 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
-  <meta name="description" content="VS Code for Web - A full-featured web-based code editor with remote source loading capabilities" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+  <meta name="description"
+    content="VS Code for Web - A full-featured web-based code editor with remote source loading capabilities" />
   <meta name="keywords" content="vscode, web editor, code editor, programming, development" />
   <meta name="author" content="khanghh" />
   <meta name="theme-color" content="#1e1e1e" />
@@ -12,7 +14,8 @@
 
   <title>VS Code for Web</title>
 
-  <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23007acc' d='M24 12L14.3 21.7L12.9 20.3L20.2 13H0V11H20.2L12.9 3.7L14.3 2.3L24 12Z'/></svg>" />
+  <link rel="icon" type="image/x-icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23007acc' d='M24 12L14.3 21.7L12.9 20.3L20.2 13H0V11H20.2L12.9 3.7L14.3 2.3L24 12Z'/></svg>" />
 
   <script src="/vscode/out/vs/loader.js"></script>
   <script src="/vscode/out/vs/webPackagePaths.js"></script>
@@ -32,7 +35,8 @@
       paths: self.webPackagePaths
     });
   </script>
-  <link data-name="vs/workbench/workbench.web.main" rel="stylesheet" href="/vscode/out/vs/workbench/workbench.web.main.css" />
+  <link data-name="vs/workbench/workbench.web.main" rel="stylesheet"
+    href="/vscode/out/vs/workbench/workbench.web.main.css" />
 </head>
 
 <body style="margin: 0; height: 100vh; overflow: hidden;">
@@ -41,74 +45,57 @@
     const messageChannel = new MessageChannel();
     const messagePorts = new Map();
     messagePorts.set("remotefs", messageChannel.port2);
-    fetch('/config.json')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Failed to load config: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(config => {
-        console.log('Loaded configuration:', config.vscodeSettings);
-        initializeVSCode(config.vscodeSettings);
-      })
-      .catch(error => {
-        console.error('Failed to load configuration, using defaults:', error);
-        // Use default configuration if loading fails
-        const vscodeSettings = {
+
+    const apiURL = `${window.location.origin}/api/fs`;
+
+    require(["vs/workbench/workbench.web.main"], (workbench) => {
+      workbench.create(document.getElementById("root"), {
+        productConfiguration: {
+          extensionEnabledApiProposals: {
+            "khanghh.remotefs": [
+              "fileSearchProvider",
+              "textSearchProvider",
+              "ipc"
+            ],
+          },
+          nameShort: "VS Code for Web",
+          nameLong: "Visual Studio Code for Web",
+          applicationName: "code-web",
+          dataFolderName: ".vscode-web",
+          version: "1.75.0",
+          extensionsGallery: {
+            serviceUrl: "https://open-vsx.org/vscode/gallery",
+            itemUrl: "https://open-vsx.org/vscode/item",
+            resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+          },
+        },
+        configurationDefaults: {
           "files.autoSave": "off",
           "workbench.colorTheme": "Default Dark+",
-          "remotefs.serverURL": "http://localhost:3000/api/fs"
-        };
-        initializeVSCode(vscodeSettings);
-      });
-
-    function initializeVSCode(vscodeSettings) {
-      require(["vs/workbench/workbench.web.main"], (workbench) => {
-        workbench.create(document.getElementById("root"), {
-          productConfiguration: {
-            extensionEnabledApiProposals: {
-              "khanghh.remotefs": [
-                "fileSearchProvider",
-                "textSearchProvider",
-                "ipc"
-              ],
-            },
-            nameShort: "VS Code for Web",
-            nameLong: "Visual Studio Code for Web",
-            applicationName: "code-web",
-            dataFolderName: ".vscode-web",
-            version: "1.75.0",
-            extensionsGallery: {
-              serviceUrl: "https://open-vsx.org/vscode/gallery",
-              itemUrl: "https://open-vsx.org/vscode/item",
-              resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
-            },
-          },
-          configurationDefaults: vscodeSettings,
-          additionalBuiltinExtensions: [
-            workbench.URI.from({
-              scheme: window.location.protocol === "http:" ? "http" : "https",
-              path: "/vscode/extensions/remotefs",
+          "remotefs.serverURL": apiURL,
+        },
+        additionalBuiltinExtensions: [
+          workbench.URI.from({
+            scheme: window.location.protocol === "http:" ? "http" : "https",
+            path: "/vscode/extensions/remotefs",
+          })
+        ],
+        workspaceProvider: {
+          workspace: {
+            folderUri: workbench.URI.from({
+              path: "/",
+              scheme: "remotefs"
             })
-          ],
-          workspaceProvider: {
-            workspace: {
-              folderUri: workbench.URI.from({
-                path: "/",
-                scheme: "remotefs"
-              })
-            },
-            trusted: true
           },
-          messagePorts: messagePorts,
-        });
-
-        messageChannel.port1.onmessage = (event) => {
-          console.log("Received message from remotefs extension:", event.data);
-        };
+          trusted: true
+        },
+        messagePorts: messagePorts,
       });
-    }
+
+      messageChannel.port1.onmessage = (event) => {
+        console.log("Received message from remotefs extension:", event.data);
+      };
+    });
 
   </script>
 </body>

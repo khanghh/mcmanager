@@ -18,7 +18,7 @@ build-docker:
 		--build-arg GIT_COMMIT=$(GIT_COMMIT) \
 		--build-arg GIT_DATE=$(GIT_DATE) \
 		--build-arg GIT_TAG=$(GIT_TAG) \
-		-t mcmanager:latest \
+		-t registry.mineviet.com/mcmanager:latest \
 		-f Dockerfile .
 	@echo "Done building."
 

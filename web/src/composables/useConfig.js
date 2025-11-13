@@ -1,43 +1,33 @@
 // composables/useConfig.js
 import { ref } from 'vue';
+import axios from 'axios';
 
 const config = ref(null);
-let loadingPromise = null;
 
+// Sync accessor: returns the reactive ref immediately
 export function useConfig() {
-  // If in dev mode, return default config immediately
+  return config;
+}
+
+// Async initializer: call once at app start to load config
+export async function loadConfig() {
+  // Dev mode: set defaults immediately
   if (import.meta.env.DEV) {
     config.value = {
       apiURL: "http://localhost:3000",
-      vscodeSettings: {
-        "files.autoSave": "off",
-        "workbench.colorTheme": "Default Dark+",
-        "remotefs.serverURL": "http://localhost:3000/api/fs"
-      }
     }
     return config;
   }
 
-  // If already loaded, return the ref immediately
-  if (config.value) {
+  // Production: always fetch latest config.json
+  try {
+    const response = await axios.get('/config.json');
+    config.value = response.data;
+    return config;
+  } catch (error) {
+    config.value = {
+      apiURL: window.location.origin
+    };
     return config;
   }
-
-  // If a fetch is already in progress, return the ref
-  if (!loadingPromise) {
-    loadingPromise = fetch('/config.json')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch config');
-        return res.json();
-      })
-      .then(data => {
-        config.value = data; // cache result
-        return data;
-      })
-      .finally(() => {
-        loadingPromise = null;
-      });
-  }
-
-  return config;
 }

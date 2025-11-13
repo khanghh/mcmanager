@@ -2,7 +2,7 @@ import { createApp, ref } from 'vue'
 import App from './App.vue'
 import router from './router'
 import './style.css'
-import { useConfig } from '@/composables/useConfig'
+import { useConfig, loadConfig } from '@/composables/useConfig'
 import { initWebsocket } from '@/composables/useWebsocket'
 import { MessageType, ServerState } from '@/generated/message.js'
 import axios from 'axios'
@@ -103,8 +103,8 @@ async function fetchServerStatus(apiURL) {
 
 // Initialize global config and WebSocket
 async function initializeApp() {
-  // Load config
-  const config = await useConfig()
+  // Initialize and then access config synchronously
+  const config = await loadConfig()
 
   // Calculate WebSocket URL
   const baseUrl = config.value?.apiURL || 'http://localhost:3000'
