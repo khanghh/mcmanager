@@ -67,7 +67,9 @@
             />
           </svg>
         </button>
-        <SearchBar />
+        <div class="flex-1 text-center lg:text-left">
+          <span class="text-lg font-semibold text-gray-900 dark:text-white">Minecraft Server Manager</span>
+        </div>
       </div>
 
       <div
@@ -78,7 +80,6 @@
           <ThemeToggler />
           <NotificationMenu />
         </div>
-        <UserMenu />
       </div>
     </div>
   </header>

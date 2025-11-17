@@ -201,7 +201,7 @@ layer(base);
 }
 
 @utility menu-item-icon {
-  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400;
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 w-6 h-6 flex items-center justify-center;
 }
 
 @utility menu-item-icon-active {
