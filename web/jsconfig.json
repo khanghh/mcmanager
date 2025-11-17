@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "exclude": [".pnpm-store", "node_modules", "dist", "vscode-web"]
-}
