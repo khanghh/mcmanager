@@ -3,8 +3,8 @@
     :class="[
       'fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-99999 border-r border-gray-200',
       {
-        'lg:w-[290px]': isExpanded || isMobileOpen || isHovered,
-        'lg:w-[90px]': !isExpanded && !isHovered,
+        'lg:w-[290px]': isExpanded || isMobileOpen,
+        'lg:w-[90px]': !isExpanded,
         'translate-x-0 w-[290px]': isMobileOpen,
         '-translate-x-full': !isMobileOpen,
         'lg:translate-x-0': true,
@@ -13,18 +13,18 @@
     <div
       :class="[
         'py-8 flex',
-        !isExpanded && !isHovered ? 'lg:justify-center' : 'justify-start',
+        !isExpanded ? 'lg:justify-center' : 'justify-start',
       ]">
       <router-link to="/">
         <img
-          v-if="isExpanded || isHovered || isMobileOpen"
+          v-if="isExpanded || isMobileOpen"
           class="dark:hidden"
           src="/images/logo/logo.svg"
           alt="Logo"
           width="200"
           height="40" />
         <img
-          v-if="isExpanded || isHovered || isMobileOpen"
+          v-if="isExpanded || isMobileOpen"
           class="hidden dark:block"
           src="/images/logo/logo-dark.svg"
           alt="Logo"
@@ -46,11 +46,11 @@
             <h2
               :class="[
                 'mb-4 text-xs uppercase flex leading-[20px] text-gray-400',
-                !isExpanded && !isHovered
+                !isExpanded
                   ? 'lg:justify-center'
                   : 'justify-start',
               ]">
-              <template v-if="isExpanded || isHovered || isMobileOpen">
+              <template v-if="isExpanded || isMobileOpen">
                 {{ menuGroup.title }}
               </template>
               <HorizontalDots v-else />
@@ -63,7 +63,7 @@
                     'menu-item-active': isSubmenuOpen(groupIndex, index),
                     'menu-item-inactive': !isSubmenuOpen(groupIndex, index),
                   },
-                  !isExpanded && !isHovered
+                  !isExpanded
                     ? 'lg:justify-center'
                     : 'lg:justify-start',
                 ]">
@@ -73,10 +73,10 @@
                       ? 'menu-item-icon-active'
                       : 'menu-item-icon-inactive',
                   ]">
-                    <component :is="item.icon" class="w-full h-full" />
+                    <component :is="resolveIcon(item.icon)" class="w-full h-full" />
                   </span>
-                  <span v-if="isExpanded || isHovered || isMobileOpen" class="menu-item-text">{{ item.name }}</span>
-                  <ChevronDownIcon v-if="isExpanded || isHovered || isMobileOpen" :class="[
+                  <span v-if="isExpanded || isMobileOpen" class="menu-item-text">{{ item.name }}</span>
+                  <ChevronDownIcon v-if="isExpanded || isMobileOpen" :class="[
                     'ml-auto w-5 h-5 transition-transform duration-200',
                     {
                       'rotate-180 text-brand-500': isSubmenuOpen(
@@ -99,61 +99,45 @@
                       ? 'menu-item-icon-active'
                       : 'menu-item-icon-inactive',
                   ]">
-                    <component :is="item.icon" class="w-full h-full" />
+                    <component :is="resolveIcon(item.icon)" class="w-full h-full" />
                   </span>
-                  <span v-if="isExpanded || isHovered || isMobileOpen" class="menu-item-text">{{ item.name }}</span>
+                  <span v-if="isExpanded || isMobileOpen" class="menu-item-text">{{ item.name }}</span>
                 </router-link>
-                <transition @enter="startTransition" @after-enter="endTransition" @before-leave="startTransition"
-                  @after-leave="endTransition">
-                  <div v-show="isSubmenuOpen(groupIndex, index) &&
-                    (isExpanded || isHovered || isMobileOpen)
-                    ">
+                <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
+                  <div v-show="isSubmenuOpen(groupIndex, index) && (isExpanded || isMobileOpen)"
+                    class="overflow-hidden transition-all duration-300 ease-in-out"
+                  >
                     <ul class="mt-2 space-y-1 ml-9">
                       <li v-for="subItem in item.subItems" :key="subItem.name">
                         <router-link :to="subItem.path" :class="[
-                          'menu-dropdown-item',
-                          {
-                            'menu-dropdown-item-active': isActive(
-                              subItem.path
-                            ),
-                            'menu-dropdown-item-inactive': !isActive(
-                              subItem.path
-                            ),
-                          },
+                          'menu-item',
+                          isActive( subItem.path)
+                            ? 'menu-item-active'
+                            : 'menu-item-inactive',
                         ]">
                           <span :class="[
                             'menu-item-icon',
                             isActive(subItem.path)
-                              ? 'menu-dropdown-icon-active'
-                              : 'menu-dropdown-icon-inactive',
+                              ? 'menu-icon-active'
+                              : 'menu-icon-inactive',
                           ]">
-                            <component :is="subItem.icon ?? item.icon" class="w-full h-full" />
+                            <component :is="resolveIcon(subItem.icon || item.icon)" class="w-full h-full" />
                           </span>
                           <span class="menu-dropdown-text">{{ subItem.name }}</span>
-                          <span class="flex items-center gap-1 ml-auto">
+                          <span v-if="subItem.new || subItem.pro"  class="flex items-center gap-1 ml-auto">
                             <span v-if="subItem.new" :class="[
                               'menu-dropdown-badge',
-                              {
-                                'menu-dropdown-badge-active': isActive(
-                                  subItem.path
-                                ),
-                                'menu-dropdown-badge-inactive': !isActive(
-                                  subItem.path
-                                ),
-                              },
+                              isActive( subItem.path)
+                                ? 'menu-dropdown-badge-active'
+                                : 'menu-dropdown-badge-inactive',
                             ]">
                               new
                             </span>
                             <span v-if="subItem.pro" :class="[
                               'menu-dropdown-badge',
-                              {
-                                'menu-dropdown-badge-active': isActive(
-                                  subItem.path
-                                ),
-                                'menu-dropdown-badge-inactive': !isActive(
-                                  subItem.path
-                                ),
-                              },
+                              isActive( subItem.path)
+                                ? 'menu-dropdown-badge-active'
+                                : 'menu-dropdown-badge-inactive',
                             ]">
                               pro
                             </span>
@@ -176,26 +160,27 @@
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 
-import {
-  GridIcon,
-  ChevronDownIcon,
-  HorizontalDots,
-  BoxIcon,
-  BoxCubeIcon,
-} from "@/icons";
+import { ChevronDownIcon, HorizontalDots } from "@/icons";
+import * as Icons from "@/icons";
 import SidebarWidget from "./SidebarWidget.vue";
 import { useSidebar } from "@/composables/useSidebar";
 
 const route = useRoute();
 
-const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
+const { isExpanded, isMobileOpen, openSubmenu } = useSidebar();
+
+// Resolve icon component from its string name. Fallback to GridIcon.
+const resolveIcon = (name) => {
+  if (!name) return Icons.GridIcon;
+  return Icons[name] || Icons.GridIcon;
+};
 
 const menuGroups = [
   {
     title: "Navigation",
     items: [
       {
-        icon: GridIcon,
+        icon: "TrashIcon",
         name: "Overview",
         path: "/overview",
       },
@@ -205,43 +190,43 @@ const menuGroups = [
     title: "Servers",
       items: [
       {
-        icon: BoxCubeIcon,
+        icon: "BoxCubeIcon",
         name: "Bungee",
         path: "/servers/bungee",
         subItems: [
-          { name: "Server Editor", path: "/line-chart#1", pro: false, icon: BoxIcon },
-          { name: "Server Console", path: "/bar-chart#2", pro: false, icon: GridIcon },
-          { name: "Players", path: "/bar-chart#2", pro: false, icon: GridIcon },
+          { name: "Server Editor", path: "/line-chart#1", pro: false, icon: "BoxIcon" },
+          { name: "Server Console", path: "/bar-chart#2", pro: false, icon: "GridIcon" },
+          { name: "Players", path: "/bar-chart#2", pro: true, icon: "GridIcon" },
         ],
       },
       {
-        icon: BoxCubeIcon,
+        icon: "BoxCubeIcon",
         name: "Hub",
         path: "/servers/hub",
         subItems: [
-          { name: "Server Editor", path: "/line-chart#3", pro: false, icon: BoxIcon },
-          { name: "Server Console", path: "/bar-chart#4", pro: false, icon: GridIcon },
-          { name: "Players", path: "/bar-chart#2", pro: false, icon: GridIcon },
+          { name: "Server Editor", path: "/line-chart#3", pro: false, icon: "BoxIcon" },
+          { name: "Server Console", path: "/bar-chart#4", pro: false, icon: "GridIcon" },
+          { name: "Players", path: "/bar-chart#2", pro: true, icon: "GridIcon", new: true },
         ],
       },
       {
-        icon: BoxCubeIcon,
+        icon: "BoxCubeIcon",
         name: "SkyBlock",
         path: "/servers/skyblock",
         subItems: [
-          { name: "Server Editor", path: "/servers/skyblock/edit", pro: false, icon: BoxIcon },
-          { name: "Server Console", path: "/servers/skyblock/console", pro: false, icon: GridIcon },
-          { name: "Players", path: "/servers/skyblock/players", pro: false, icon: GridIcon },
+          { name: "Server Editor", path: "/servers/skyblock/edit", pro: false, icon: "BoxIcon" },
+          { name: "Server Console", path: "/servers/skyblock/console", pro: false, icon: "GridIcon" },
+          { name: "Players", path: "/servers/skyblock/players", pro: false, icon: "GridIcon" },
         ],
       },
       {
-        icon: BoxCubeIcon,
+        icon: "BoxCubeIcon",
         name: "Fractions",
         path: "/servers/fractions",
         subItems: [
-          { name: "Server Editor", path: "/signin", pro: false, icon: GridIcon },
-          { name: "Server Console", path: "/signup", pro: false, icon: BoxIcon },
-          { name: "Players", path: "/bar-chart#2", pro: false, icon: GridIcon },
+          { name: "Server Editor", path: "/signin", pro: false, icon: "PhPackage" },
+          { name: "Server Console", path: "/signup", pro: false, icon: "BoxIcon" },
+          { name: "Players", path: "/bar-chart#2", pro: false, icon: "GridIcon" },
         ],
       },
     ],
@@ -275,15 +260,37 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
   );
 };
 
-const startTransition = (el) => {
-  el.style.height = "auto";
-  const height = el.scrollHeight;
+// Smooth expand/collapse for submenu
+const beforeEnter = (el) => {
   el.style.height = "0px";
-  el.offsetHeight; // force reflow
-  el.style.height = height + "px";
+  el.style.overflow = "hidden";
 };
 
-const endTransition = (el) => {
+const enter = (el) => {
+  // Expand to full height
+  el.style.height = el.scrollHeight + "px";
+};
+
+const afterEnter = (el) => {
+  // Cleanup inline styles
   el.style.height = "";
+  el.style.overflow = "";
+};
+
+const beforeLeave = (el) => {
+  // Set current height to allow transition to zero
+  el.style.height = el.scrollHeight + "px";
+  el.style.overflow = "hidden";
+};
+
+const leave = (el) => {
+  // Force reflow then collapse
+  void el.offsetHeight;
+  el.style.height = "0px";
+};
+
+const afterLeave = (el) => {
+  el.style.height = "";
+  el.style.overflow = "";
 };
 </script>
