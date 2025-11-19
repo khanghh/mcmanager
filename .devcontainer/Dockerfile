@@ -29,11 +29,16 @@ RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && \
     tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
     rm go${GO_VERSION}.linux-amd64.tar.gz
-ENV PATH="/usr/local/go/bin:${PATH}"
 
-RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
+ENV GOPATH=/home/node/go
+ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
 
 USER node
+
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+RUN go install golang.org/x/tools/gopls@latest
+RUN go install golang.org/x/tools/cmd/goimports@latest
 
 WORKDIR /workdir
 
