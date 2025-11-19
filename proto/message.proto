@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option go_package = "github.com/khang/mcmanager/internal/gen;gen";
+
+message ErrorInfo {
+  string code = 1;
+  string message = 2;
+}
+
+message CmdInput {
+  string id = 1;
+  bytes data = 2;
+}
+
+message CmdOuput {
+  string id = 1;
+  bytes data = 2;
+}
+
+message CmdResize {
+  string id = 1;
+  uint32 cols = 2;
+  uint32 rows = 3;
+}
+
+message CmdStatus {
+  string id = 1;
+  string status = 2;
+}
+
+message Message {
+  oneof payload {
+    ErrorInfo error = 1;
+    CmdInput cmd_input = 2;
+    CmdOuput cmd_ouput = 3;
+    CmdResize cmd_resize = 4;
+    CmdStatus cmd_status = 5;
+  }
+}
