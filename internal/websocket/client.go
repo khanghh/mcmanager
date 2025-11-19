@@ -102,6 +102,14 @@ func (c *Client) SendMessage(msg *gen.Message) error {
 	return c.send(data)
 }
 
+func (c *Client) Subscribe(topicName string) {
+	c.server.GetTopic(topicName).AddSubscriber(c)
+}
+
+func (c *Client) Unsubscribe(topicName string) {
+	c.server.GetTopic(topicName).RemoveSubscriber(c)
+}
+
 func (c *Client) send(data []byte) error {
 	select {
 	case c.out <- data:

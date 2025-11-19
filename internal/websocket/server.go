@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
 	fiberws "github.com/gofiber/websocket/v2"
@@ -15,13 +16,27 @@ type HandleFunc func(cl *Client, msg *gen.Message) error
 
 type Server struct {
 	clients      map[*Client]struct{}
+	topics       map[string]*Topic
 	handlers     []HandleFunc
 	onConnect    []func(cl *Client) error
 	onDisconnect []func(cl *Client) error
 	broadcast    chan *gen.Message
 	register     chan *Client
 	unregister   chan *Client
+	mu           sync.Mutex
 	shutdown     chan struct{}
+}
+
+func (s *Server) GetTopic(name string) *Topic {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	topic, ok := s.topics[name]
+	if !ok {
+		topic = NewTopic(name)
+		s.topics[name] = topic
+	}
+	return topic
 }
 
 func (s *Server) OnConnect(handler func(cl *Client) error) {
@@ -48,7 +63,7 @@ func (s *Server) ServeFiberWS() fiber.Handler {
 	return fiberws.New(func(conn *fiberws.Conn) {
 		cl := &Client{
 			conn:   conn,
-			out:    make(chan []byte, 256),
+			out:    make(chan []byte, 128),
 			server: s,
 			closed: make(chan struct{}),
 		}
