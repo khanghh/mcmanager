@@ -5,15 +5,19 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	fiberws "github.com/gofiber/websocket/v2"
 	"github.com/khanghh/mcmanager/internal/config"
 	"github.com/khanghh/mcmanager/internal/handlers"
 	"github.com/khanghh/mcmanager/internal/manager"
 	"github.com/khanghh/mcmanager/internal/params"
+	"github.com/khanghh/mcmanager/internal/websocket"
 	"github.com/urfave/cli/v2"
 )
 
@@ -109,13 +113,31 @@ func getRunnerAPIURLs(runnerCfgs []config.MCRunnerConfig) map[string]string {
 	return apiURLs
 }
 
+func initWebsocketServer(managerHandler *handlers.MCManagerHandler) *websocket.Server {
+	wsServer := websocket.NewServer()
+	wsServer.OnConnect(managerHandler.OnWSClientConnect)
+	wsServer.OnDisconnect(managerHandler.OnWSClientDisconnect)
+	wsServer.OnMessage(managerHandler.OnWSMessage)
+	return wsServer
+}
+
 func run(cli *cli.Context) error {
 	config := mustLoadConfig(cli)
 	runners := mustInitRunnerList(config.Servers)
 	runnerAPIURLs := getRunnerAPIURLs(config.Servers)
 
-	// TODO: serve manager api and websocket
-	_ = manager.NewMCManagerService(runners)
+	managerSvc := manager.NewMCManagerService(runners)
+	managerHandler := handlers.NewMCManagerHandler(managerSvc)
+	wsServer := initWebsocketServer(managerHandler)
+
+	var (
+		wsUpgradeRequired = func(ctx *fiber.Ctx) error {
+			if !fiberws.IsWebSocketUpgrade(ctx) {
+				return fiber.ErrUpgradeRequired
+			}
+			return ctx.Next()
+		}
+	)
 
 	router := fiber.New(fiber.Config{
 		CaseSensitive: true,
@@ -124,13 +146,26 @@ func run(cli *cli.Context) error {
 		ReadTimeout:   params.ServerReadTimeout,
 		WriteTimeout:  params.ServerWriteTimeout,
 	})
+	router.Use(logger.New())
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 	}))
 
-	router.Use(logger.New())
-	router.All("/api/:name", handlers.MCRunnerProxyHandler(runnerAPIURLs))
 	router.Static("/", config.StaticDir)
+	router.All("/api/:name", handlers.MCRunnerProxyHandler(runnerAPIURLs))
+	router.Get("/ws", wsUpgradeRequired, wsServer.ServeFiberWS())
+
+	sigCh := make(chan os.Signal, 2)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		go func() {
+			_ = wsServer.Shutdown()
+			_ = router.Shutdown()
+		}()
+		<-sigCh
+		os.Exit(1)
+	}()
 
 	return router.Listen(config.ListenAddr)
 }
