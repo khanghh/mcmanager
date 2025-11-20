@@ -39,6 +39,17 @@ func (s *Server) GetTopic(name string) *Topic {
 	return topic
 }
 
+func (s *Server) FindTopic(name string) *Topic {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	topic, ok := s.topics[name]
+	if !ok {
+		return nil
+	}
+	return topic
+}
+
 func (s *Server) OnConnect(handler func(cl *Client) error) {
 	s.onConnect = append(s.onConnect, handler)
 }
@@ -76,6 +87,12 @@ func (s *Server) ServeFiberWS() fiber.Handler {
 }
 
 func (s *Server) handleMessage(cl *Client, msg *gen.Message) error {
+	switch payload := msg.Payload.(type) {
+	case *gen.Message_Subscribe:
+		return cl.Subscribe(payload.Subscribe.Topic)
+	case *gen.Message_Unsubscribe:
+		return cl.Unsubscribe(payload.Unsubscribe.Topic)
+	}
 	for _, handler := range s.handlers {
 		if err := handler(cl, msg); err != nil {
 			fmt.Println("handle message:", err)

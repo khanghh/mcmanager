@@ -28,12 +28,22 @@ message CmdStatus {
   string status = 2;
 }
 
+message Subscribe {
+  string topic = 1;
+}
+
+message Unsubscribe {
+  string topic = 1;
+}
+
 message Message {
   oneof payload {
     ErrorInfo error = 1;
-    CmdInput cmd_input = 2;
-    CmdOuput cmd_ouput = 3;
-    CmdResize cmd_resize = 4;
-    CmdStatus cmd_status = 5;
+    Subscribe subscribe = 2;
+    Unsubscribe unsubscribe = 3;
+    CmdInput cmd_input = 4;
+    CmdOuput cmd_ouput = 5;
+    CmdResize cmd_resize = 6;
+    CmdStatus cmd_status = 7;
   }
 }
