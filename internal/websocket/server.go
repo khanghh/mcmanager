@@ -10,30 +10,31 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type Broadcaster func(broadcastCh chan *gen.Message, done chan struct{})
-
 type HandleFunc func(cl *Client, msg *gen.Message) error
 
 type Server struct {
 	clients      map[*Client]struct{}
 	topics       map[string]*Topic
-	handlers     []HandleFunc
-	onConnect    []func(cl *Client) error
-	onDisconnect []func(cl *Client) error
+	handlers     map[gen.MessageType]HandleFunc
 	broadcast    chan *gen.Message
 	register     chan *Client
 	unregister   chan *Client
 	mu           sync.Mutex
+	onConnect    func(cl *Client) error
+	onDisconnect func(cl *Client) error
 	shutdown     chan struct{}
 }
 
-func (s *Server) GetTopic(name string) *Topic {
+func (s *Server) getTopic(name string) *Topic {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	topic, ok := s.topics[name]
 	if !ok {
-		topic = NewTopic(name)
+		topic = &Topic{
+			name: name,
+			subs: make(map[*Client]struct{}),
+		}
 		s.topics[name] = topic
 	}
 	return topic
@@ -50,24 +51,38 @@ func (s *Server) FindTopic(name string) *Topic {
 	return topic
 }
 
-func (s *Server) OnConnect(handler func(cl *Client) error) {
-	s.onConnect = append(s.onConnect, handler)
+func (s *Server) OnConnect(onConnect func(cl *Client) error) {
+	s.onConnect = onConnect
 }
 
-func (s *Server) OnDisconnect(handler func(cl *Client) error) {
-	s.onDisconnect = append(s.onDisconnect, handler)
+func (s *Server) OnDisconnect(onDisconnect func(cl *Client) error) {
+	s.onDisconnect = onDisconnect
 }
 
-func (s *Server) OnMessage(handler HandleFunc) {
-	s.handlers = append(s.handlers, handler)
+func (s *Server) RegisterHandler(msgType gen.MessageType, handler HandleFunc) {
+	s.handlers[msgType] = handler
 }
 
-func (s *Server) StartBroadcast(broadcaster Broadcaster) {
-	go broadcaster(s.broadcast, s.shutdown)
+func (s *Server) StartBroadcast(topicName string, producer func() *gen.Message) {
+
 }
 
 func (s *Server) Broadcast(msg *gen.Message) {
+	select {
+	case <-s.shutdown:
+		return
+	default:
+	}
 	s.broadcast <- msg
+}
+
+func (s *Server) BroadcastTopic(topic string, msg *gen.Message) {
+	select {
+	case <-s.shutdown:
+		return
+	default:
+	}
+	s.getTopic(topic).Broadcast(msg)
 }
 
 func (s *Server) ServeFiberWS() fiber.Handler {
@@ -93,24 +108,23 @@ func (s *Server) handleMessage(cl *Client, msg *gen.Message) error {
 	case *gen.Message_Unsubscribe:
 		return cl.Unsubscribe(payload.Unsubscribe.Topic)
 	}
-	for _, handler := range s.handlers {
-		if err := handler(cl, msg); err != nil {
-			fmt.Println("handle message:", err)
-			return err
-		}
+	handler, ok := s.handlers[msg.Type]
+	if !ok {
+		return nil
 	}
-	return nil
+	return handler(cl, msg)
 }
 
 func (s *Server) loop() {
 	defer func() {
-		for client := range s.clients {
-			for _, handler := range s.onDisconnect {
-				if err := handler(client); err != nil {
-					fmt.Println("disconnect:", err)
+		for cl := range s.clients {
+			if s.onDisconnect != nil {
+				if err := s.onDisconnect(cl); err != nil {
+					fmt.Println("disconnect error:", err)
 				}
 			}
-			client.Close()
+			cl.Close()
+			delete(s.clients, cl)
 		}
 	}()
 
@@ -130,23 +144,24 @@ func (s *Server) loop() {
 				}
 			}
 		case cl := <-s.register:
-			s.clients[cl] = struct{}{}
-			for _, handler := range s.onConnect {
-				if err := handler(cl); err != nil {
-					fmt.Println("connect:", err)
+			if s.onConnect != nil {
+				if err := s.onConnect(cl); err != nil {
+					fmt.Println("client rejected:", err)
+					cl.Close()
+					continue
 				}
 			}
+			s.clients[cl] = struct{}{}
 		case cl := <-s.unregister:
-			for _, handler := range s.onDisconnect {
-				if err := handler(cl); err != nil {
-					fmt.Println("disconnect:", err)
+			if s.onDisconnect != nil {
+				if err := s.onDisconnect(cl); err != nil {
+					fmt.Println("disconnect error:", err)
 				}
 			}
 			cl.Close()
 			delete(s.clients, cl)
 		}
 	}
-
 }
 
 func (s *Server) Shutdown() error {

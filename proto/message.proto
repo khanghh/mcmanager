@@ -2,6 +2,18 @@ syntax = "proto3";
 
 option go_package = "github.com/khang/mcmanager/internal/gen;gen";
 
+enum MessageType {
+  UNKNOWN = 0;
+  ERROR = 1;
+  SUBSCRIBE = 2;
+  UNSUBSCRIBE = 3;
+
+  CMD_INPUT = 100;
+  CMD_OUTPUT = 101;
+  CMD_RESIZE = 102;
+  CMD_STATUS = 103;
+}
+
 message ErrorInfo {
   string code = 1;
   string message = 2;
@@ -12,7 +24,7 @@ message CmdInput {
   bytes data = 2;
 }
 
-message CmdOuput {
+message CmdOutput {
   string id = 1;
   bytes data = 2;
 }
@@ -37,13 +49,14 @@ message Unsubscribe {
 }
 
 message Message {
+  MessageType type = 1;
   oneof payload {
-    ErrorInfo error = 1;
-    Subscribe subscribe = 2;
-    Unsubscribe unsubscribe = 3;
-    CmdInput cmd_input = 4;
-    CmdOuput cmd_ouput = 5;
-    CmdResize cmd_resize = 6;
-    CmdStatus cmd_status = 7;
+    ErrorInfo error = 2;
+    Subscribe subscribe = 3;
+    Unsubscribe unsubscribe = 4;
+    CmdInput cmd_input = 5;
+    CmdOutput cmd_output = 6;
+    CmdResize cmd_resize = 7;
+    CmdStatus cmd_status = 8;
   }
 }

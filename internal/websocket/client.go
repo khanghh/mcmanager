@@ -52,7 +52,9 @@ func (c *Client) readPump() {
 			log.Printf("proto unmarshal: %v", err)
 			continue
 		}
-		c.server.handleMessage(c, &msg)
+		if err := c.server.handleMessage(c, &msg); err != nil {
+			log.Printf("handle message type %d failed: %v", msg.Type, err)
+		}
 	}
 }
 

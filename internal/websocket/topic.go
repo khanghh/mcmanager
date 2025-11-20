@@ -13,13 +13,6 @@ type Topic struct {
 	closed bool
 }
 
-func NewTopic(name string) *Topic {
-	return &Topic{
-		name: name,
-		subs: make(map[*Client]struct{}),
-	}
-}
-
 func (t *Topic) AddSubscriber(cl *Client) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
