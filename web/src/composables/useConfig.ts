@@ -1,10 +1,14 @@
 // composables/useConfig.ts
 import { ref, type Ref } from 'vue';
-import axios from 'axios';
-// Use fetch instead of axios to avoid an extra dependency and types
+import { useApi } from './useApi';
+
+type ServerConfig = {
+  name: string;
+  icon: string;
+}
 
 export interface AppConfig {
-  apiURL?: string;
+  servers: ServerConfig[];
   [key: string]: any;
 }
 
@@ -17,23 +21,14 @@ export function useConfig(): Ref<AppConfig | null> {
 
 // Async initializer: call once at app start to load config
 export async function loadConfig(): Promise<Ref<AppConfig | null>> {
-  // Dev mode: set defaults immediately
-  if (import.meta.env.DEV) {
-    config.value = {
-      apiURL: 'http://localhost:3000',
-    };
-    return config;
+  const api = useApi();
+
+  const raw = await api.getConfig();
+
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as any).servers)) {
+    throw new Error('Invalid configuration');
   }
 
-  // Production: always fetch latest config.json
-  try {
-    const response = await axios.get('/config.json');
-    config.value = response.data;
-    return config;
-  } catch (error) {
-    config.value = {
-      apiURL: window.location.origin
-    };
-    return config;
-  }
+  config.value = raw as AppConfig;
+  return config;
 }
