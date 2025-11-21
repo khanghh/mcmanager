@@ -1,0 +1,56 @@
+package handlers
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/khanghh/mcmanager/internal/config"
+)
+
+type AppConfigHandler struct {
+	config *config.AppConfig
+}
+
+type feServerConfig struct {
+	Name string `json:"name"`
+	Icon string `json:"icon"`
+}
+
+type frontEndConfig struct {
+	Servers    []feServerConfig       `json:"servers"`
+	VSCode     map[string]interface{} `json:"vscode"`
+	HasChanged bool                   `json:"hasChanged,omitempty"`
+}
+
+func (h *AppConfigHandler) GetConfig(ctx *fiber.Ctx) error {
+	raw := ctx.QueryBool("raw")
+	if raw {
+		ctx.Set(fiber.HeaderContentType, "application/x-yaml")
+		return ctx.Send(h.config.Raw())
+	}
+
+	servers := []feServerConfig{}
+	for _, srv := range h.config.Servers() {
+		servers = append(servers, feServerConfig{
+			Name: srv.Name,
+			Icon: srv.Icon,
+		})
+	}
+	return ctx.JSON(&frontEndConfig{
+		Servers:    servers,
+		VSCode:     h.config.VSCode(),
+		HasChanged: h.config.HasChanged(),
+	})
+}
+
+func (h *AppConfigHandler) PostConfig(ctx *fiber.Ctx) error {
+	data := ctx.Body()
+	if err := h.config.Save(data); err != nil {
+		return err
+	}
+	return ctx.SendStatus(fiber.StatusOK)
+}
+
+func NewAppConfigHandler(appConfig *config.AppConfig) *AppConfigHandler {
+	return &AppConfigHandler{
+		config: appConfig,
+	}
+}
