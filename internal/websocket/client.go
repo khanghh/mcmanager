@@ -27,6 +27,10 @@ type Client struct {
 	closed chan struct{}
 }
 
+func (c *Client) Conn() *fiberws.Conn {
+	return c.conn
+}
+
 func (c *Client) readPump() {
 	defer c.Close()
 	c.conn.SetReadLimit(maxMessageSize)

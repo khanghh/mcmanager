@@ -25,7 +25,7 @@ type Server struct {
 	shutdown     chan struct{}
 }
 
-func (s *Server) getTopic(name string) *Topic {
+func (s *Server) GetTopic(name string) *Topic {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -78,7 +78,7 @@ func (s *Server) BroadcastTopic(topic string, msg *gen.Message) {
 		return
 	default:
 	}
-	s.getTopic(topic).Broadcast(msg)
+	s.GetTopic(topic).Broadcast(msg)
 }
 
 func (s *Server) ServeFiberWS() fiber.Handler {
@@ -179,6 +179,8 @@ func NewServer() *Server {
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		broadcast:  make(chan *gen.Message),
+		handlers:   make(map[gen.MessageType]HandleFunc),
+		topics:     make(map[string]*Topic),
 		shutdown:   make(chan struct{}),
 	}
 
