@@ -34,10 +34,13 @@ func (h *AppConfigHandler) GetConfig(ctx *fiber.Ctx) error {
 			Icon: srv.Icon,
 		})
 	}
-	return ctx.JSON(&frontEndConfig{
-		Servers:    servers,
-		VSCode:     h.config.VSCode(),
-		HasChanged: h.config.HasChanged(),
+	return ctx.JSON(APIResponse{
+		APIVersion: "1.0",
+		Data: &frontEndConfig{
+			Servers:    servers,
+			VSCode:     h.config.VSCode(),
+			HasChanged: h.config.HasChanged(),
+		},
 	})
 }
 
