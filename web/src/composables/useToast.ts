@@ -1,88 +1,117 @@
-import { toast } from 'vue3-toastify';
-import 'vue3-toastify/dist/index.css';
+import { ref, readonly } from 'vue'
 
-type ToastOptions = Record<string, any>;
-type ToastId = string | number;
+export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
-export interface UseToast {
-  success: (message: string, options?: ToastOptions) => void;
-  error: (message: string, options?: ToastOptions) => void;
-  warning: (message: string, options?: ToastOptions) => void;
-  info: (message: string, options?: ToastOptions) => void;
-  loading: (message: string, options?: ToastOptions) => void;
-  update: (toastId: ToastId, message: string, options?: ToastOptions) => void;
-  dismiss: (toastId?: ToastId) => void;
-  dismissAll: () => void;
-  toast: any;
+export interface Toast {
+  id: string
+  type: ToastType
+  title?: string
+  message: string
+  duration?: number
+  startTime?: number
+  remainingTime?: number
 }
 
-export function useToast(): UseToast {
-  const _toast: any = toast as any;
+interface ToastOptions {
+  title?: string
+  duration?: number
+}
 
-  const success = (message: string, options: ToastOptions = {}) => {
-    _toast.success(message, {
-      autoClose: 3000,
-      position: toast.POSITION.BOTTOM_RIGHT,
-      ...options
-    });
-  };
+const toasts = ref<Toast[]>([])
+const toastTimeouts = new Map<string, number>()
 
-  const error = (message: string, options: ToastOptions = {}) => {
-    _toast.error(message, {
-      autoClose: 3000,
-      position: toast.POSITION.BOTTOM_RIGHT,
-      ...options
-    });
-  };
+function generateId(): string {
+  return `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
 
-  const warning = (message: string, options: ToastOptions = {}) => {
-    _toast.warning(message, {
-      autoClose: 3000,
-      position: toast.POSITION.BOTTOM_RIGHT,
-      ...options
-    });
-  };
+function addToast(type: ToastType, message: string, options: ToastOptions = {}) {
+  const id = generateId()
+  const duration = options.duration ?? 5000
 
-  const info = (message: string, options: ToastOptions = {}) => {
-    _toast.info(message, {
-      autoClose: 3000,
-      position: toast.POSITION.BOTTOM_RIGHT,
-      ...options
-    });
-  };
+  const toast: Toast = {
+    id,
+    type,
+    title: options.title,
+    message,
+    duration,
+    startTime: Date.now(),
+    remainingTime: duration
+  }
 
-  const loading = (message: string, options: ToastOptions = {}) => {
-    _toast.loading(message, {
-      autoClose: false,
-      position: toast.POSITION.BOTTOM_RIGHT,
-      ...options
-    });
-  };
+  toasts.value.push(toast)
 
-  const update = (toastId: ToastId, message: string, options: ToastOptions = {}) => {
-    _toast.update(toastId, {
-      render: message,
-      ...options
-    });
-  };
+  // Auto remove after duration
+  if (duration > 0) {
+    const timeoutId = window.setTimeout(() => {
+      removeToast(id)
+    }, duration)
+    toastTimeouts.set(id, timeoutId)
+  }
 
-  const dismiss = (toastId?: ToastId) => {
-    _toast.dismiss(toastId);
-  };
+  return id
+}
 
-  const dismissAll = () => {
-    _toast.dismiss();
-  };
+function removeToast(id: string) {
+  const index = toasts.value.findIndex(t => t.id === id)
+  if (index !== -1) {
+    toasts.value.splice(index, 1)
 
+    // Clear timeout if exists
+    const timeoutId = toastTimeouts.get(id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      toastTimeouts.delete(id)
+    }
+  }
+}
+
+function pauseToast(id: string) {
+  const toast = toasts.value.find(t => t.id === id)
+  if (toast && toast.duration && toast.duration > 0 && toast.remainingTime && toast.remainingTime > 0) {
+    // Clear existing timeout
+    const timeoutId = toastTimeouts.get(id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      toastTimeouts.delete(id)
+    }
+
+    // Calculate remaining time
+    const elapsed = Date.now() - (toast.startTime || Date.now())
+    toast.remainingTime -= elapsed
+  }
+}
+
+function resumeToast(id: string) {
+  const toast = toasts.value.find(t => t.id === id)
+  if (toast && toast.duration && toast.duration > 0 && toast.remainingTime && toast.remainingTime > 0) {
+    // Reset start time
+    toast.startTime = Date.now()
+
+    // Set new timeout with remaining time
+    const timeoutId = window.setTimeout(() => {
+      removeToast(id)
+    }, toast.remainingTime)
+    toastTimeouts.set(id, timeoutId)
+  }
+}
+
+function clearAll() {
+  toasts.value = []
+  toastTimeouts.forEach(timeoutId => clearTimeout(timeoutId))
+  toastTimeouts.clear()
+}
+
+export function useToast() {
   return {
-    success,
-    error,
-    warning,
-    info,
-    loading,
-    update,
-    dismiss,
-    dismissAll,
-    toast: _toast // expose the raw toast function for advanced usage
-  };
+    toasts: readonly(toasts),
+    addToast,
+    removeToast,
+    pauseToast,
+    resumeToast,
+    clearAll,
+    success: (message: string, options?: ToastOptions) => addToast('success', message, options),
+    error: (message: string, options?: ToastOptions) => addToast('error', message, options),
+    warning: (message: string, options?: ToastOptions) => addToast('warning', message, options),
+    info: (message: string, options?: ToastOptions) => addToast('info', message, options)
+  }
 }
