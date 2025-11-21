@@ -27,7 +27,6 @@ import {
   PhChartPie,
   PhCaretDown,
   PhDotsThree,
-  PhPlug,
   PhFile,
   PhCheckCircle,
   PhXCircle,
@@ -43,7 +42,19 @@ import {
   PhCheck,
   PhMailbox,
   PhPaperPlaneRight,
-  PhFile as PhFileDefault,
+  PhHardDrive,
+  PhPlay,
+  PhStop,
+  PhSkull,
+  PhCpu,
+  PhMemory,
+  PhSpeedometer,
+  PhClock,
+  PhX,
+  PhTerminalWindow,
+  PhPlugCharging,
+  PhPlug,
+  PhUsersThree,
 } from "@phosphor-icons/vue";
 
 // Re-export Phosphor icons under the original names used across the app
@@ -76,8 +87,7 @@ export const PieChartIcon = PhChartPie;
 export const ChevronDownIcon = PhCaretDown;
 export const HorizontalDots = PhDotsThree;
 export const Calendar2Line = PhCalendar;
-export const PlugInIcon = PhPlug;
-export const PageIcon = PhFileDefault;
+export const PageIcon = PhFile;
 export const TableIcon = PhTable;
 export const ListIcon = PhList;
 export const LogoutIcon = PhSignOut;
@@ -93,7 +103,7 @@ export const MenuIcon = PhHamburger;
 export const CheckIcon = PhCheck;
 export const MailBox = PhMailbox;
 export const SendIcon = PhPaperPlaneRight;
-export const DraftIcon = PhFileDefault;
+export const DraftIcon = PhFile;
 
 // Standardized exports: original Ph* name + Icon suffix for direct resolution.
 // These are additive and preserve backward compatibility with existing aliases above.
@@ -101,6 +111,7 @@ export const PhBellIcon = PhBell;
 export const PhChartBarIcon = PhChartBar;
 export const PhLayoutIcon = PhLayout;
 export const PhUsersIcon = PhUsers;
+export const PhUsersThreeIcon = PhUsersThree;
 export const PhFolderIcon = PhFolder;
 export const PhTrashSimpleIcon = PhTrashSimple;
 export const PhLifebuoyIcon = PhLifebuoy;
@@ -125,7 +136,6 @@ export const PhFileTextIcon = PhFileText;
 export const PhChartPieIcon = PhChartPie;
 export const PhCaretDownIcon = PhCaretDown;
 export const PhDotsThreeIcon = PhDotsThree;
-export const PhPlugIcon = PhPlug;
 export const PhFileIcon = PhFile;
 export const PhCheckCircleIcon = PhCheckCircle;
 export const PhXCircleIcon = PhXCircle;
@@ -141,5 +151,16 @@ export const PhHamburgerIcon = PhHamburger;
 export const PhCheckIcon = PhCheck;
 export const PhMailboxIcon = PhMailbox;
 export const PhPaperPlaneRightIcon = PhPaperPlaneRight;
-export const PhFileDefaultIcon = PhFileDefault;
-
+export const PhFileDefaultIcon = PhFile;
+export const PhHardDriveIcon = PhHardDrive;
+export const PhPlayIcon = PhPlay;
+export const PhStopIcon = PhStop;
+export const PhSkullIcon = PhSkull;
+export const PhCpuIcon = PhCpu;
+export const PhMemoryIcon = PhMemory;
+export const PhSpeedometerIcon = PhSpeedometer;
+export const PhClockIcon = PhClock;
+export const PhXIcon = PhX;
+export const PhTerminalWindowIcon = PhTerminalWindow;
+export const PhPlugIcon = PhPlug;
+export const PhPlugChargingIcon = PhPlugCharging;

@@ -7,43 +7,52 @@ const router = createRouter({
   },
   routes: [
     {
-      path: '/overview',
-      name: 'Ecommerce',
+      path: '/',
+      redirect: '/dashboard',
+    },
+    {
+      path: '/dashboard',
+      name: 'Dashboard',
       component: () => import('../views/Ecommerce.vue'),
       meta: {
         title: 'eCommerce Dashboard',
       },
     },
     {
-      path: '/bungee',
-      name: 'Bungee',
-      component: () => import('../views/Ecommerce.vue'),
+      path: '/servers/:name',
+      name: 'Server',
+      redirect: (to) => `/servers/${to.params.name}/overview`,
+    },
+    {
+      path: '/servers/:name/overview',
+      name: 'Overview',
+      component: () => import('../views/server/Overview.vue'),
       meta: {
-        title: 'eCommerce Dashboard',
+        title: 'Server Overview',
       },
     },
     {
-      path: '/hub',
-      name: 'Hub',
-      component: () => import('../views/Ecommerce.vue'),
+      path: '/servers/:name/edit',
+      name: 'CodeEditor',
+      component: () => import('../views/server/CodeEditor.vue'),
       meta: {
-        title: 'eCommerce Dashboard',
+        title: 'Server Editor',
       },
     },
-     {
-      path: '/skyblock',
-      name: 'SkyBlock',
-      component: () => import('../views/Ecommerce.vue'),
+    {
+      path: '/servers/:name/console',
+      name: 'Console',
+      component: () => import('../views/server/Console.vue'),
       meta: {
-        title: 'eCommerce Dashboard',
+        title: 'Server Console',
       },
     },
-     {
-      path: '/fractions',
-      name: 'Fractions',
-      component: () => import('../views/Ecommerce.vue'),
+    {
+      path: '/servers/:name/players',
+      name: 'PlayerList',
+      component: () => import('../views/server/PlayerList.vue'),
       meta: {
-        title: 'eCommerce Dashboard',
+        title: 'Server Players',
       },
     },
   ],
@@ -52,6 +61,7 @@ const router = createRouter({
 export default router
 
 router.beforeEach((to, from, next) => {
-  document.title = `Vue.js ${to.meta.title} | TailAdmin - Vue.js Tailwind CSS Dashboard Template`
+  const title = typeof to.meta.title === 'function' ? to.meta.title(to) : to.meta.title
+  document.title = `Vue.js ${title} | TailAdmin - Vue.js Tailwind CSS Dashboard Template`
   next()
 })

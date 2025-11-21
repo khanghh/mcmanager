@@ -4,410 +4,13 @@ import Long = require("long");
 export enum MessageType {
     UNKNOWN = 0,
     ERROR = 1,
-    PTY_INPUT = 101,
-    PTY_OUTPUT = 102,
-    PTY_RESIZE = 103,
-    SERVER_START = 104,
-    SERVER_STOP = 105,
-    SERVER_KILL = 106,
-    SERVER_STATUS = 107
-}
-
-/** ServerState enum. */
-export enum ServerState {
-    STOPPED = 0,
-    RUNNING = 1,
-    STOPPING = 2
-}
-
-/** Represents a Message. */
-export class Message implements IMessage {
-
-    /**
-     * Constructs a new Message.
-     * @param [properties] Properties to set
-     */
-    constructor(properties?: IMessage);
-
-    /** Message type. */
-    public type: MessageType;
-
-    /** Message error. */
-    public error?: (IErrorInfo|null);
-
-    /** Message ptyBuffer. */
-    public ptyBuffer?: (IPtyBuffer|null);
-
-    /** Message ptyResize. */
-    public ptyResize?: (IPtyResize|null);
-
-    /** Message serverStatus. */
-    public serverStatus?: (IServerStatus|null);
-
-    /** Message payload. */
-    public payload?: ("error"|"ptyBuffer"|"ptyResize"|"serverStatus");
-
-    /**
-     * Creates a new Message instance using the specified properties.
-     * @param [properties] Properties to set
-     * @returns Message instance
-     */
-    public static create(properties?: IMessage): Message;
-
-    /**
-     * Encodes the specified Message message. Does not implicitly {@link Message.verify|verify} messages.
-     * @param message Message message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encode(message: IMessage, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Encodes the specified Message message, length delimited. Does not implicitly {@link Message.verify|verify} messages.
-     * @param message Message message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encodeDelimited(message: IMessage, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Decodes a Message message from the specified reader or buffer.
-     * @param reader Reader or buffer to decode from
-     * @param [length] Message length if known beforehand
-     * @returns Message
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Message;
-
-    /**
-     * Decodes a Message message from the specified reader or buffer, length delimited.
-     * @param reader Reader or buffer to decode from
-     * @returns Message
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Message;
-
-    /**
-     * Verifies a Message message.
-     * @param message Plain object to verify
-     * @returns `null` if valid, otherwise the reason why it is not
-     */
-    public static verify(message: { [k: string]: any }): (string|null);
-
-    /**
-     * Creates a Message message from a plain object. Also converts values to their respective internal types.
-     * @param object Plain object
-     * @returns Message
-     */
-    public static fromObject(object: { [k: string]: any }): Message;
-
-    /**
-     * Creates a plain object from a Message message. Also converts values to other types if specified.
-     * @param message Message
-     * @param [options] Conversion options
-     * @returns Plain object
-     */
-    public static toObject(message: Message, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-    /**
-     * Converts this Message to JSON.
-     * @returns JSON object
-     */
-    public toJSON(): { [k: string]: any };
-
-    /**
-     * Gets the default type url for Message
-     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-     * @returns The default type url
-     */
-    public static getTypeUrl(typeUrlPrefix?: string): string;
-}
-
-/** Represents a PtyBuffer. */
-export class PtyBuffer implements IPtyBuffer {
-
-    /**
-     * Constructs a new PtyBuffer.
-     * @param [properties] Properties to set
-     */
-    constructor(properties?: IPtyBuffer);
-
-    /** PtyBuffer data. */
-    public data: Uint8Array;
-
-    /**
-     * Creates a new PtyBuffer instance using the specified properties.
-     * @param [properties] Properties to set
-     * @returns PtyBuffer instance
-     */
-    public static create(properties?: IPtyBuffer): PtyBuffer;
-
-    /**
-     * Encodes the specified PtyBuffer message. Does not implicitly {@link PtyBuffer.verify|verify} messages.
-     * @param message PtyBuffer message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encode(message: IPtyBuffer, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Encodes the specified PtyBuffer message, length delimited. Does not implicitly {@link PtyBuffer.verify|verify} messages.
-     * @param message PtyBuffer message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encodeDelimited(message: IPtyBuffer, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Decodes a PtyBuffer message from the specified reader or buffer.
-     * @param reader Reader or buffer to decode from
-     * @param [length] Message length if known beforehand
-     * @returns PtyBuffer
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): PtyBuffer;
-
-    /**
-     * Decodes a PtyBuffer message from the specified reader or buffer, length delimited.
-     * @param reader Reader or buffer to decode from
-     * @returns PtyBuffer
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): PtyBuffer;
-
-    /**
-     * Verifies a PtyBuffer message.
-     * @param message Plain object to verify
-     * @returns `null` if valid, otherwise the reason why it is not
-     */
-    public static verify(message: { [k: string]: any }): (string|null);
-
-    /**
-     * Creates a PtyBuffer message from a plain object. Also converts values to their respective internal types.
-     * @param object Plain object
-     * @returns PtyBuffer
-     */
-    public static fromObject(object: { [k: string]: any }): PtyBuffer;
-
-    /**
-     * Creates a plain object from a PtyBuffer message. Also converts values to other types if specified.
-     * @param message PtyBuffer
-     * @param [options] Conversion options
-     * @returns Plain object
-     */
-    public static toObject(message: PtyBuffer, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-    /**
-     * Converts this PtyBuffer to JSON.
-     * @returns JSON object
-     */
-    public toJSON(): { [k: string]: any };
-
-    /**
-     * Gets the default type url for PtyBuffer
-     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-     * @returns The default type url
-     */
-    public static getTypeUrl(typeUrlPrefix?: string): string;
-}
-
-/** Represents a PtyResize. */
-export class PtyResize implements IPtyResize {
-
-    /**
-     * Constructs a new PtyResize.
-     * @param [properties] Properties to set
-     */
-    constructor(properties?: IPtyResize);
-
-    /** PtyResize cols. */
-    public cols: number;
-
-    /** PtyResize rows. */
-    public rows: number;
-
-    /**
-     * Creates a new PtyResize instance using the specified properties.
-     * @param [properties] Properties to set
-     * @returns PtyResize instance
-     */
-    public static create(properties?: IPtyResize): PtyResize;
-
-    /**
-     * Encodes the specified PtyResize message. Does not implicitly {@link PtyResize.verify|verify} messages.
-     * @param message PtyResize message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encode(message: IPtyResize, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Encodes the specified PtyResize message, length delimited. Does not implicitly {@link PtyResize.verify|verify} messages.
-     * @param message PtyResize message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encodeDelimited(message: IPtyResize, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Decodes a PtyResize message from the specified reader or buffer.
-     * @param reader Reader or buffer to decode from
-     * @param [length] Message length if known beforehand
-     * @returns PtyResize
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): PtyResize;
-
-    /**
-     * Decodes a PtyResize message from the specified reader or buffer, length delimited.
-     * @param reader Reader or buffer to decode from
-     * @returns PtyResize
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): PtyResize;
-
-    /**
-     * Verifies a PtyResize message.
-     * @param message Plain object to verify
-     * @returns `null` if valid, otherwise the reason why it is not
-     */
-    public static verify(message: { [k: string]: any }): (string|null);
-
-    /**
-     * Creates a PtyResize message from a plain object. Also converts values to their respective internal types.
-     * @param object Plain object
-     * @returns PtyResize
-     */
-    public static fromObject(object: { [k: string]: any }): PtyResize;
-
-    /**
-     * Creates a plain object from a PtyResize message. Also converts values to other types if specified.
-     * @param message PtyResize
-     * @param [options] Conversion options
-     * @returns Plain object
-     */
-    public static toObject(message: PtyResize, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-    /**
-     * Converts this PtyResize to JSON.
-     * @returns JSON object
-     */
-    public toJSON(): { [k: string]: any };
-
-    /**
-     * Gets the default type url for PtyResize
-     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-     * @returns The default type url
-     */
-    public static getTypeUrl(typeUrlPrefix?: string): string;
-}
-
-/** Represents a ServerStatus. */
-export class ServerStatus implements IServerStatus {
-
-    /**
-     * Constructs a new ServerStatus.
-     * @param [properties] Properties to set
-     */
-    constructor(properties?: IServerStatus);
-
-    /** ServerStatus state. */
-    public state: ServerState;
-
-    /** ServerStatus pid. */
-    public pid: number;
-
-    /** ServerStatus uptime. */
-    public uptime: (number|Long);
-
-    /** ServerStatus players. */
-    public players: (number|Long);
-
-    /** ServerStatus version. */
-    public version: string;
-
-    /**
-     * Creates a new ServerStatus instance using the specified properties.
-     * @param [properties] Properties to set
-     * @returns ServerStatus instance
-     */
-    public static create(properties?: IServerStatus): ServerStatus;
-
-    /**
-     * Encodes the specified ServerStatus message. Does not implicitly {@link ServerStatus.verify|verify} messages.
-     * @param message ServerStatus message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encode(message: IServerStatus, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Encodes the specified ServerStatus message, length delimited. Does not implicitly {@link ServerStatus.verify|verify} messages.
-     * @param message ServerStatus message or plain object to encode
-     * @param [writer] Writer to encode to
-     * @returns Writer
-     */
-    public static encodeDelimited(message: IServerStatus, writer?: $protobuf.Writer): $protobuf.Writer;
-
-    /**
-     * Decodes a ServerStatus message from the specified reader or buffer.
-     * @param reader Reader or buffer to decode from
-     * @param [length] Message length if known beforehand
-     * @returns ServerStatus
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): ServerStatus;
-
-    /**
-     * Decodes a ServerStatus message from the specified reader or buffer, length delimited.
-     * @param reader Reader or buffer to decode from
-     * @returns ServerStatus
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): ServerStatus;
-
-    /**
-     * Verifies a ServerStatus message.
-     * @param message Plain object to verify
-     * @returns `null` if valid, otherwise the reason why it is not
-     */
-    public static verify(message: { [k: string]: any }): (string|null);
-
-    /**
-     * Creates a ServerStatus message from a plain object. Also converts values to their respective internal types.
-     * @param object Plain object
-     * @returns ServerStatus
-     */
-    public static fromObject(object: { [k: string]: any }): ServerStatus;
-
-    /**
-     * Creates a plain object from a ServerStatus message. Also converts values to other types if specified.
-     * @param message ServerStatus
-     * @param [options] Conversion options
-     * @returns Plain object
-     */
-    public static toObject(message: ServerStatus, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-    /**
-     * Converts this ServerStatus to JSON.
-     * @returns JSON object
-     */
-    public toJSON(): { [k: string]: any };
-
-    /**
-     * Gets the default type url for ServerStatus
-     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-     * @returns The default type url
-     */
-    public static getTypeUrl(typeUrlPrefix?: string): string;
+    SUBSCRIBE = 2,
+    UNSUBSCRIBE = 3,
+    CMD_ATTACH = 100,
+    CMD_INPUT = 101,
+    CMD_OUTPUT = 102,
+    CMD_RESIZE = 104,
+    CMD_STATUS = 105
 }
 
 /** Represents an ErrorInfo. */
@@ -497,6 +100,675 @@ export class ErrorInfo implements IErrorInfo {
 
     /**
      * Gets the default type url for ErrorInfo
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents a CmdInput. */
+export class CmdInput implements ICmdInput {
+
+    /**
+     * Constructs a new CmdInput.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: ICmdInput);
+
+    /** CmdInput id. */
+    public id: string;
+
+    /** CmdInput data. */
+    public data: Uint8Array;
+
+    /**
+     * Creates a new CmdInput instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns CmdInput instance
+     */
+    public static create(properties?: ICmdInput): CmdInput;
+
+    /**
+     * Encodes the specified CmdInput message. Does not implicitly {@link CmdInput.verify|verify} messages.
+     * @param message CmdInput message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: ICmdInput, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified CmdInput message, length delimited. Does not implicitly {@link CmdInput.verify|verify} messages.
+     * @param message CmdInput message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: ICmdInput, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a CmdInput message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns CmdInput
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): CmdInput;
+
+    /**
+     * Decodes a CmdInput message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns CmdInput
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): CmdInput;
+
+    /**
+     * Verifies a CmdInput message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a CmdInput message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns CmdInput
+     */
+    public static fromObject(object: { [k: string]: any }): CmdInput;
+
+    /**
+     * Creates a plain object from a CmdInput message. Also converts values to other types if specified.
+     * @param message CmdInput
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: CmdInput, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this CmdInput to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for CmdInput
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents a CmdOutput. */
+export class CmdOutput implements ICmdOutput {
+
+    /**
+     * Constructs a new CmdOutput.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: ICmdOutput);
+
+    /** CmdOutput id. */
+    public id: string;
+
+    /** CmdOutput data. */
+    public data: Uint8Array;
+
+    /**
+     * Creates a new CmdOutput instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns CmdOutput instance
+     */
+    public static create(properties?: ICmdOutput): CmdOutput;
+
+    /**
+     * Encodes the specified CmdOutput message. Does not implicitly {@link CmdOutput.verify|verify} messages.
+     * @param message CmdOutput message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: ICmdOutput, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified CmdOutput message, length delimited. Does not implicitly {@link CmdOutput.verify|verify} messages.
+     * @param message CmdOutput message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: ICmdOutput, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a CmdOutput message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns CmdOutput
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): CmdOutput;
+
+    /**
+     * Decodes a CmdOutput message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns CmdOutput
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): CmdOutput;
+
+    /**
+     * Verifies a CmdOutput message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a CmdOutput message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns CmdOutput
+     */
+    public static fromObject(object: { [k: string]: any }): CmdOutput;
+
+    /**
+     * Creates a plain object from a CmdOutput message. Also converts values to other types if specified.
+     * @param message CmdOutput
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: CmdOutput, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this CmdOutput to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for CmdOutput
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents a CmdResize. */
+export class CmdResize implements ICmdResize {
+
+    /**
+     * Constructs a new CmdResize.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: ICmdResize);
+
+    /** CmdResize id. */
+    public id: string;
+
+    /** CmdResize cols. */
+    public cols: number;
+
+    /** CmdResize rows. */
+    public rows: number;
+
+    /**
+     * Creates a new CmdResize instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns CmdResize instance
+     */
+    public static create(properties?: ICmdResize): CmdResize;
+
+    /**
+     * Encodes the specified CmdResize message. Does not implicitly {@link CmdResize.verify|verify} messages.
+     * @param message CmdResize message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: ICmdResize, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified CmdResize message, length delimited. Does not implicitly {@link CmdResize.verify|verify} messages.
+     * @param message CmdResize message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: ICmdResize, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a CmdResize message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns CmdResize
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): CmdResize;
+
+    /**
+     * Decodes a CmdResize message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns CmdResize
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): CmdResize;
+
+    /**
+     * Verifies a CmdResize message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a CmdResize message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns CmdResize
+     */
+    public static fromObject(object: { [k: string]: any }): CmdResize;
+
+    /**
+     * Creates a plain object from a CmdResize message. Also converts values to other types if specified.
+     * @param message CmdResize
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: CmdResize, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this CmdResize to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for CmdResize
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents a CmdStatus. */
+export class CmdStatus implements ICmdStatus {
+
+    /**
+     * Constructs a new CmdStatus.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: ICmdStatus);
+
+    /** CmdStatus id. */
+    public id: string;
+
+    /** CmdStatus status. */
+    public status: string;
+
+    /**
+     * Creates a new CmdStatus instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns CmdStatus instance
+     */
+    public static create(properties?: ICmdStatus): CmdStatus;
+
+    /**
+     * Encodes the specified CmdStatus message. Does not implicitly {@link CmdStatus.verify|verify} messages.
+     * @param message CmdStatus message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: ICmdStatus, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified CmdStatus message, length delimited. Does not implicitly {@link CmdStatus.verify|verify} messages.
+     * @param message CmdStatus message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: ICmdStatus, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a CmdStatus message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns CmdStatus
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): CmdStatus;
+
+    /**
+     * Decodes a CmdStatus message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns CmdStatus
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): CmdStatus;
+
+    /**
+     * Verifies a CmdStatus message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a CmdStatus message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns CmdStatus
+     */
+    public static fromObject(object: { [k: string]: any }): CmdStatus;
+
+    /**
+     * Creates a plain object from a CmdStatus message. Also converts values to other types if specified.
+     * @param message CmdStatus
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: CmdStatus, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this CmdStatus to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for CmdStatus
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents a Subscribe. */
+export class Subscribe implements ISubscribe {
+
+    /**
+     * Constructs a new Subscribe.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: ISubscribe);
+
+    /** Subscribe topic. */
+    public topic: string;
+
+    /**
+     * Creates a new Subscribe instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns Subscribe instance
+     */
+    public static create(properties?: ISubscribe): Subscribe;
+
+    /**
+     * Encodes the specified Subscribe message. Does not implicitly {@link Subscribe.verify|verify} messages.
+     * @param message Subscribe message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: ISubscribe, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified Subscribe message, length delimited. Does not implicitly {@link Subscribe.verify|verify} messages.
+     * @param message Subscribe message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: ISubscribe, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a Subscribe message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns Subscribe
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Subscribe;
+
+    /**
+     * Decodes a Subscribe message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns Subscribe
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Subscribe;
+
+    /**
+     * Verifies a Subscribe message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a Subscribe message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns Subscribe
+     */
+    public static fromObject(object: { [k: string]: any }): Subscribe;
+
+    /**
+     * Creates a plain object from a Subscribe message. Also converts values to other types if specified.
+     * @param message Subscribe
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: Subscribe, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this Subscribe to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for Subscribe
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents an Unsubscribe. */
+export class Unsubscribe implements IUnsubscribe {
+
+    /**
+     * Constructs a new Unsubscribe.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: IUnsubscribe);
+
+    /** Unsubscribe topic. */
+    public topic: string;
+
+    /**
+     * Creates a new Unsubscribe instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns Unsubscribe instance
+     */
+    public static create(properties?: IUnsubscribe): Unsubscribe;
+
+    /**
+     * Encodes the specified Unsubscribe message. Does not implicitly {@link Unsubscribe.verify|verify} messages.
+     * @param message Unsubscribe message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: IUnsubscribe, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified Unsubscribe message, length delimited. Does not implicitly {@link Unsubscribe.verify|verify} messages.
+     * @param message Unsubscribe message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: IUnsubscribe, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes an Unsubscribe message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns Unsubscribe
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Unsubscribe;
+
+    /**
+     * Decodes an Unsubscribe message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns Unsubscribe
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Unsubscribe;
+
+    /**
+     * Verifies an Unsubscribe message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates an Unsubscribe message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns Unsubscribe
+     */
+    public static fromObject(object: { [k: string]: any }): Unsubscribe;
+
+    /**
+     * Creates a plain object from an Unsubscribe message. Also converts values to other types if specified.
+     * @param message Unsubscribe
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: Unsubscribe, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this Unsubscribe to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for Unsubscribe
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Represents a Message. */
+export class Message implements IMessage {
+
+    /**
+     * Constructs a new Message.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: IMessage);
+
+    /** Message type. */
+    public type: MessageType;
+
+    /** Message error. */
+    public error?: (IErrorInfo|null);
+
+    /** Message subscribe. */
+    public subscribe?: (ISubscribe|null);
+
+    /** Message unsubscribe. */
+    public unsubscribe?: (IUnsubscribe|null);
+
+    /** Message cmdInput. */
+    public cmdInput?: (ICmdInput|null);
+
+    /** Message cmdOutput. */
+    public cmdOutput?: (ICmdOutput|null);
+
+    /** Message cmdResize. */
+    public cmdResize?: (ICmdResize|null);
+
+    /** Message cmdStatus. */
+    public cmdStatus?: (ICmdStatus|null);
+
+    /** Message payload. */
+    public payload?: ("error"|"subscribe"|"unsubscribe"|"cmdInput"|"cmdOutput"|"cmdResize"|"cmdStatus");
+
+    /**
+     * Creates a new Message instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns Message instance
+     */
+    public static create(properties?: IMessage): Message;
+
+    /**
+     * Encodes the specified Message message. Does not implicitly {@link Message.verify|verify} messages.
+     * @param message Message message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: IMessage, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified Message message, length delimited. Does not implicitly {@link Message.verify|verify} messages.
+     * @param message Message message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: IMessage, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a Message message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns Message
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Message;
+
+    /**
+     * Decodes a Message message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns Message
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Message;
+
+    /**
+     * Verifies a Message message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a Message message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns Message
+     */
+    public static fromObject(object: { [k: string]: any }): Message;
+
+    /**
+     * Creates a plain object from a Message message. Also converts values to other types if specified.
+     * @param message Message
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: Message, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this Message to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for Message
      * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
      * @returns The default type url
      */
