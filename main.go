@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	fiberws "github.com/gofiber/websocket/v2"
 	"github.com/khanghh/mcmanager/internal/config"
+	"github.com/khanghh/mcmanager/internal/gen"
 	"github.com/khanghh/mcmanager/internal/handlers"
 	"github.com/khanghh/mcmanager/internal/manager"
 	"github.com/khanghh/mcmanager/internal/params"
@@ -92,18 +93,6 @@ func mustLoadConfig(cli *cli.Context) *config.Config {
 	return config
 }
 
-func mustInitRunnerList(runnerCfgs []config.MCRunnerConfig) []*manager.MCRunner {
-	runners := make([]*manager.MCRunner, 0, len(runnerCfgs))
-	for _, cfg := range runnerCfgs {
-		runner, err := manager.NewMCRunner(cfg.Name, cfg.GRPCAddr)
-		if err != nil {
-			log.Fatalf("could not initialize MCRunner %q: %v", cfg.Name, err)
-		}
-		runners = append(runners, runner)
-	}
-	return runners
-}
-
 func getRunnerAPIURLs(runnerCfgs []config.MCRunnerConfig) map[string]string {
 	apiURLs := make(map[string]string)
 	for _, cfg := range runnerCfgs {
@@ -117,16 +106,29 @@ func initWebsocketServer(managerHandler *handlers.MCManagerHandler) *websocket.S
 	wsServer := websocket.NewServer()
 	wsServer.OnConnect(managerHandler.OnWSClientConnect)
 	wsServer.OnDisconnect(managerHandler.OnWSClientDisconnect)
-	wsServer.OnMessage(managerHandler.OnWSMessage)
+	wsServer.RegisterHandler(gen.MessageType_CMD_INPUT, managerHandler.HandleCmdInput)
+	wsServer.RegisterHandler(gen.MessageType_CMD_RESIZE, managerHandler.HandleCmdResize)
+	managerHandler.StartBroadcast(wsServer)
 	return wsServer
+}
+
+func mustInitMCManagerService(servers []config.MCRunnerConfig) *manager.MCManagerService {
+	runners := make(map[string]*manager.MCRunnerClient)
+	for _, sv := range servers {
+		runner, err := manager.NewMCRunnerClient(sv.Name, sv.GRPCAddr)
+		if err != nil {
+			log.Fatalf("could not initialize MCRunner %q: %v", sv.Name, err)
+		}
+		runners[sv.Name] = runner
+	}
+	return manager.NewMCManagerService(runners)
 }
 
 func run(cli *cli.Context) error {
 	config := mustLoadConfig(cli)
-	runners := mustInitRunnerList(config.Servers)
 	runnerAPIURLs := getRunnerAPIURLs(config.Servers)
 
-	managerSvc := manager.NewMCManagerService(runners)
+	managerSvc := mustInitMCManagerService(config.Servers)
 	managerHandler := handlers.NewMCManagerHandler(managerSvc)
 	wsServer := initWebsocketServer(managerHandler)
 

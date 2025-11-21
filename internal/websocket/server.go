@@ -63,10 +63,6 @@ func (s *Server) RegisterHandler(msgType gen.MessageType, handler HandleFunc) {
 	s.handlers[msgType] = handler
 }
 
-func (s *Server) StartBroadcast(topicName string, producer func() *gen.Message) {
-
-}
-
 func (s *Server) Broadcast(msg *gen.Message) {
 	select {
 	case <-s.shutdown:
