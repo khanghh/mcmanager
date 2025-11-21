@@ -103,15 +103,16 @@
                   </span>
                   <span v-if="isExpanded || isMobileOpen" class="menu-item-text">{{ item.name }}</span>
                 </router-link>
-                <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
+                <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter"
+                  @before-leave="beforeLeave"
+                  @leave="leave" @after-leave="afterLeave">
                   <div v-show="isSubmenuOpen(groupIndex, index) && (isExpanded || isMobileOpen)"
-                    class="overflow-hidden transition-all duration-300 ease-in-out"
-                  >
+                    class="overflow-hidden transition-all duration-300 ease-in-out">
                     <ul class="mt-2 space-y-1 ml-9">
                       <li v-for="subItem in item.subItems" :key="subItem.name">
                         <router-link :to="subItem.path" :class="[
                           'menu-item',
-                          isActive( subItem.path)
+                          isActive(subItem.path)
                             ? 'menu-item-active'
                             : 'menu-item-inactive',
                         ]">
@@ -124,10 +125,10 @@
                             <component :is="resolveIcon(subItem.icon || item.icon)" class="w-full h-full" />
                           </span>
                           <span class="menu-dropdown-text">{{ subItem.name }}</span>
-                          <span v-if="subItem.new || subItem.pro"  class="flex items-center gap-1 ml-auto">
+                          <span v-if="subItem.new || subItem.pro" class="flex items-center gap-1 ml-auto">
                             <span v-if="subItem.new" :class="[
                               'menu-dropdown-badge',
-                              isActive( subItem.path)
+                              isActive(subItem.path)
                                 ? 'menu-dropdown-badge-active'
                                 : 'menu-dropdown-badge-inactive',
                             ]">
@@ -135,7 +136,7 @@
                             </span>
                             <span v-if="subItem.pro" :class="[
                               'menu-dropdown-badge',
-                              isActive( subItem.path)
+                              isActive(subItem.path)
                                 ? 'menu-dropdown-badge-active'
                                 : 'menu-dropdown-badge-inactive',
                             ]">
@@ -164,10 +165,12 @@ import { ChevronDownIcon, HorizontalDots } from "@/icons";
 import * as Icons from "@/icons";
 import SidebarWidget from "./SidebarWidget.vue";
 import { useSidebar } from "@/composables/useSidebar";
+import { useConfig } from "@/composables/useConfig";
 
 const route = useRoute();
 
 const { isExpanded, isMobileOpen, openSubmenu } = useSidebar();
+const config = useConfig();
 
 // Resolve icon component from its string name. Fallback to GridIcon.
 const resolveIcon = (name) => {
@@ -175,63 +178,39 @@ const resolveIcon = (name) => {
   return Icons[name] || Icons.GridIcon;
 };
 
-const menuGroups = [
+const serverMenuItems = computed(() => {
+  if (!config.value || !config.value.servers) {
+    return [];
+  }
+  return config.value.servers.map((item) => ({
+    icon: item.icon || "BoxCubeIcon",
+    name: item.name,
+    path: `/servers/${item.name.toLowerCase()}`,
+    subItems: [
+      { name: "Overview", path: `/servers/${item.name.toLowerCase()}/overview`, pro: false, icon: "PhSpeedometerIcon" },
+      { name: "Server Editor", path: `/servers/${item.name.toLowerCase()}/edit`, pro: false, icon: "BoxIcon" },
+      { name: "Server Console", path: `/servers/${item.name.toLowerCase()}/console`, pro: false, icon: "PhTerminalWindowIcon" },
+      // { name: "Players", path: `/servers/${item.name.toLowerCase()}/players`, pro: item.proPlayers || false, icon: "GridIcon", new: item.newPlayers || false },
+    ],
+  }));
+});
+
+const menuGroups = computed(() => [
   {
     title: "Navigation",
     items: [
       {
-        icon: "TrashIcon",
+        icon: "PhSpeedometerIcon",
         name: "Overview",
-        path: "/overview",
+        path: "/dashboard",
       },
     ],
   },
   {
     title: "Servers",
-      items: [
-      {
-        icon: "BoxCubeIcon",
-        name: "Bungee",
-        path: "/servers/bungee",
-        subItems: [
-          { name: "Server Editor", path: "/line-chart#1", pro: false, icon: "BoxIcon" },
-          { name: "Server Console", path: "/bar-chart#2", pro: false, icon: "GridIcon" },
-          { name: "Players", path: "/bar-chart#2", pro: true, icon: "GridIcon" },
-        ],
-      },
-      {
-        icon: "BoxCubeIcon",
-        name: "Hub",
-        path: "/servers/hub",
-        subItems: [
-          { name: "Server Editor", path: "/line-chart#3", pro: false, icon: "BoxIcon" },
-          { name: "Server Console", path: "/bar-chart#4", pro: false, icon: "GridIcon" },
-          { name: "Players", path: "/bar-chart#2", pro: true, icon: "GridIcon", new: true },
-        ],
-      },
-      {
-        icon: "BoxCubeIcon",
-        name: "SkyBlock",
-        path: "/servers/skyblock",
-        subItems: [
-          { name: "Server Editor", path: "/servers/skyblock/edit", pro: false, icon: "BoxIcon" },
-          { name: "Server Console", path: "/servers/skyblock/console", pro: false, icon: "GridIcon" },
-          { name: "Players", path: "/servers/skyblock/players", pro: false, icon: "GridIcon" },
-        ],
-      },
-      {
-        icon: "BoxCubeIcon",
-        name: "Fractions",
-        path: "/servers/fractions",
-        subItems: [
-          { name: "Server Editor", path: "/signin", pro: false, icon: "PhPackage" },
-          { name: "Server Console", path: "/signup", pro: false, icon: "BoxIcon" },
-          { name: "Players", path: "/bar-chart#2", pro: false, icon: "GridIcon" },
-        ],
-      },
-    ],
+    items: serverMenuItems.value
   },
-];
+]);
 
 const isActive = (path) => route.path === path;
 
@@ -241,7 +220,7 @@ const toggleSubmenu = (groupIndex, itemIndex) => {
 };
 
 const isAnySubmenuRouteActive = computed(() => {
-  return menuGroups.some((group) =>
+  return menuGroups.value.some((group) =>
     group.items.some(
       (item) =>
         item.subItems && item.subItems.some((subItem) => isActive(subItem.path))
@@ -254,7 +233,7 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
   return (
     openSubmenu.value === key ||
     (isAnySubmenuRouteActive.value &&
-      menuGroups[groupIndex].items[itemIndex].subItems?.some((subItem) =>
+      menuGroups.value[groupIndex].items[itemIndex].subItems?.some((subItem) =>
         isActive(subItem.path)
       ))
   );
