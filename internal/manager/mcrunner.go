@@ -108,7 +108,10 @@ func (m *MCRunnerClient) streamConsole(ctx context.Context) error {
 	go m.client.StreamConsole(ctx, send, receive)
 	for {
 		select {
-		case msg := <-receive:
+		case msg, ok := <-receive:
+			if !ok {
+				return nil
+			}
 			m.handleConsoleMessage(msg)
 		case data := <-m.cmdInput:
 			send <- NewPtyBufferMessage(data)

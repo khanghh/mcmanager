@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/khanghh/mcmanager/internal/gen"
 	"github.com/khanghh/mcmanager/internal/manager"
@@ -48,18 +49,19 @@ func (h *MCManagerHandler) HandleCmdResize(cl *websocket.Client, msg *gen.Messag
 
 func (h *MCManagerHandler) StartBroadcast(server *websocket.Server) {
 	for _, runner := range h.managerSvc.Runners() {
-		runnerTopic := fmt.Sprintf("server:%s", runner.Name())
+		runnerTopic := fmt.Sprintf("server:%s", strings.ToLower(runner.Name()))
+		topic := server.GetTopic(runnerTopic)
 		runner.OnError(func(err *manager.RunnerError) {
 			msg := mapRunnerErrorMessage(runner.Name(), err)
-			server.BroadcastTopic(runnerTopic, msg)
+			topic.Broadcast(msg)
 		})
 		runner.OnOutput(func(data []byte) {
 			msg := NewCmdOutputMessage(runner.Name(), data)
-			server.BroadcastTopic(runnerTopic, msg)
+			topic.Broadcast(msg)
 		})
 		runner.OnStatus(func(status manager.RunnerStatus) {
 			msg := NewServerStatusMessage(runner.Name(), status)
-			server.BroadcastTopic(runnerTopic, msg)
+			topic.Broadcast(msg)
 		})
 		runner.OnState(func(state *manager.ServerState) {
 			//TODO: capture server metrics

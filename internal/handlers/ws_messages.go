@@ -10,6 +10,7 @@ import (
 
 func NewServerNotExistsError(serverID string) *gen.Message {
 	return &gen.Message{
+		Type: gen.MessageType_ERROR,
 		Payload: &gen.Message_Error{
 			Error: &gen.ErrorInfo{
 				Code:    "SERVER_NOT_EXISTS",
@@ -21,6 +22,7 @@ func NewServerNotExistsError(serverID string) *gen.Message {
 
 func NewInternalServerError(msg string) *gen.Message {
 	return &gen.Message{
+		Type: gen.MessageType_ERROR,
 		Payload: &gen.Message_Error{
 			Error: &gen.ErrorInfo{
 				Code:    "INTERNAL_SERVER_ERROR",
@@ -32,6 +34,7 @@ func NewInternalServerError(msg string) *gen.Message {
 
 func NewCmdOutputMessage(runnerID string, data []byte) *gen.Message {
 	return &gen.Message{
+		Type: gen.MessageType_CMD_OUTPUT,
 		Payload: &gen.Message_CmdOutput{
 			CmdOutput: &gen.CmdOutput{
 				Id:   runnerID,
@@ -43,6 +46,7 @@ func NewCmdOutputMessage(runnerID string, data []byte) *gen.Message {
 
 func NewServerStatusMessage(runnerID string, status manager.RunnerStatus) *gen.Message {
 	return &gen.Message{
+		Type: gen.MessageType_CMD_STATUS,
 		Payload: &gen.Message_CmdStatus{
 			CmdStatus: &gen.CmdStatus{
 				Id:     runnerID,
@@ -66,6 +70,7 @@ func mapRunnerErrorMessage(runnerID string, err error) *gen.Message {
 	}
 
 	return &gen.Message{
+		Type: gen.MessageType_ERROR,
 		Payload: &gen.Message_Error{
 			Error: &gen.ErrorInfo{
 				Code:    code,

@@ -76,24 +76,16 @@ func printVersion(cli *cli.Context) error {
 	return nil
 }
 
-func mustLoadConfig(cli *cli.Context) *config.Config {
+func mustLoadAppConfig(cli *cli.Context) *config.AppConfig {
 	configFile := cli.String(configFileFlag.Name)
-	config, err := config.LoadConfig(configFile)
+	config, err := config.LoadAppConfig(configFile)
 	if err != nil {
 		log.Fatalf("could not load config file: %v", err)
-	}
-	staticDir := cli.String(staticDir.Name)
-	if staticDir != "" {
-		config.StaticDir = staticDir
-	}
-	listenAddr := cli.String(listenFlag.Name)
-	if listenAddr != "" {
-		config.ListenAddr = listenAddr
 	}
 	return config
 }
 
-func getRunnerAPIURLs(runnerCfgs []config.MCRunnerConfig) map[string]string {
+func getRunnerAPIURLs(runnerCfgs []config.ServerConfig) map[string]string {
 	apiURLs := make(map[string]string)
 	for _, cfg := range runnerCfgs {
 		apiURL, _ := url.JoinPath(cfg.APIURL)
@@ -112,7 +104,7 @@ func initWebsocketServer(managerHandler *handlers.MCManagerHandler) *websocket.S
 	return wsServer
 }
 
-func mustInitMCManagerService(servers []config.MCRunnerConfig) *manager.MCManagerService {
+func mustInitMCManagerService(servers []config.ServerConfig) *manager.MCManagerService {
 	runners := make(map[string]*manager.MCRunnerClient)
 	for _, sv := range servers {
 		runner, err := manager.NewMCRunnerClient(sv.Name, sv.GRPCAddr)
@@ -125,22 +117,30 @@ func mustInitMCManagerService(servers []config.MCRunnerConfig) *manager.MCManage
 }
 
 func run(cli *cli.Context) error {
-	config := mustLoadConfig(cli)
-	runnerAPIURLs := getRunnerAPIURLs(config.Servers)
+	staticDir := cli.String(staticDir.Name)
+	listenAddr := cli.String(listenFlag.Name)
 
-	managerSvc := mustInitMCManagerService(config.Servers)
+	// config
+	appConfig := mustLoadAppConfig(cli)
+	configData := appConfig.Value()
+	runnerAPIURLs := getRunnerAPIURLs(configData.Servers)
+
+	// services
+	managerSvc := mustInitMCManagerService(configData.Servers)
+
+	// handler
 	managerHandler := handlers.NewMCManagerHandler(managerSvc)
-	wsServer := initWebsocketServer(managerHandler)
+	appConfigHandler := handlers.NewAppConfigHandler(appConfig)
 
-	var (
-		wsUpgradeRequired = func(ctx *fiber.Ctx) error {
-			if !fiberws.IsWebSocketUpgrade(ctx) {
-				return fiber.ErrUpgradeRequired
-			}
-			return ctx.Next()
+	// middlewares
+	wsUpgradeRequired := func(ctx *fiber.Ctx) error {
+		if !fiberws.IsWebSocketUpgrade(ctx) {
+			return fiber.ErrUpgradeRequired
 		}
-	)
+		return ctx.Next()
+	}
 
+	wsServer := initWebsocketServer(managerHandler)
 	router := fiber.New(fiber.Config{
 		CaseSensitive: true,
 		BodyLimit:     params.ServerBodyLimit,
@@ -152,10 +152,19 @@ func run(cli *cli.Context) error {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 	}))
-
-	router.Static("/", config.StaticDir)
-	router.All("/api/:name", handlers.MCRunnerProxyHandler(runnerAPIURLs))
+	router.Static("/", staticDir)
 	router.Get("/ws", wsUpgradeRequired, wsServer.ServeFiberWS())
+	router.Get("/api/config", appConfigHandler.GetConfig)
+	router.Post("/api/config", appConfigHandler.PostConfig)
+	router.All("/api/server/:name", handlers.MCRunnerProxyHandler(runnerAPIURLs))
+	router.Post("/api/shutdown", func(ctx *fiber.Ctx) error {
+		go func() {
+			_ = wsServer.Shutdown()
+			_ = router.Shutdown()
+			os.Exit(1)
+		}()
+		return ctx.SendStatus(fiber.StatusOK)
+	})
 
 	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -169,7 +178,7 @@ func run(cli *cli.Context) error {
 		os.Exit(1)
 	}()
 
-	return router.Listen(config.ListenAddr)
+	return router.Listen(listenAddr)
 }
 
 func main() {
