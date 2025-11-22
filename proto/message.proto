@@ -8,7 +8,6 @@ enum MessageType {
   SUBSCRIBE = 2;
   UNSUBSCRIBE = 3;
 
-  CMD_ATTACH = 100;
   CMD_INPUT = 101;
   CMD_OUTPUT = 102;
   CMD_RESIZE = 104;

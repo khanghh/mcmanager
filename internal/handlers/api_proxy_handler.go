@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,15 +10,18 @@ import (
 )
 
 func MCRunnerProxyHandler(apiURLs map[string]string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		name := c.Params("name")
-		path := c.Params("*")
+	return func(ctx *fiber.Ctx) error {
+		name := ctx.Params("name")
+		path := ctx.Params("*")
 		apiURL, ok := apiURLs[strings.ToLower(name)]
 		if !ok {
 			return fiber.NewError(fiber.StatusNotFound)
 		}
-		fullURL := apiURL + "/" + path
-		fmt.Println(fullURL)
-		return proxy.Do(c, fullURL)
+		fullURL, err := url.JoinPath(apiURL, path)
+		if err != nil {
+			fmt.Println(err)
+			return ctx.SendStatus(fiber.StatusInternalServerError)
+		}
+		return proxy.Do(ctx, fullURL)
 	}
 }

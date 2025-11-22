@@ -100,6 +100,7 @@ func initWebsocketServer(managerHandler *handlers.MCManagerHandler) *websocket.S
 	wsServer.OnDisconnect(managerHandler.OnWSClientDisconnect)
 	wsServer.RegisterHandler(gen.MessageType_CMD_INPUT, managerHandler.HandleCmdInput)
 	wsServer.RegisterHandler(gen.MessageType_CMD_RESIZE, managerHandler.HandleCmdResize)
+	wsServer.RegisterHandler(gen.MessageType_CMD_CONNECT, managerHandler.HandleCmdConnect)
 	managerHandler.StartBroadcast(wsServer)
 	return wsServer
 }
@@ -156,7 +157,7 @@ func run(cli *cli.Context) error {
 	router.Get("/ws", wsUpgradeRequired, wsServer.ServeFiberWS())
 	router.Get("/api/config", appConfigHandler.GetConfig)
 	router.Post("/api/config", appConfigHandler.PostConfig)
-	router.All("/api/server/:name", handlers.MCRunnerProxyHandler(runnerAPIURLs))
+	router.All("/api/servers/:name/*", handlers.MCRunnerProxyHandler(runnerAPIURLs))
 	router.Post("/api/shutdown", func(ctx *fiber.Ctx) error {
 		go func() {
 			_ = wsServer.Shutdown()
