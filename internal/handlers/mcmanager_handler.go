@@ -47,7 +47,28 @@ func (h *MCManagerHandler) HandleCmdResize(cl *websocket.Client, msg *gen.Messag
 	return runner.ResizePTY(context.Background(), rows, cols)
 }
 
+func (h *MCManagerHandler) HandleCmdConnect(cl *websocket.Client, msg *gen.Message) error {
+	cmdConnect := msg.GetCmdConnect()
+	runnerID := cmdConnect.GetId()
+	runner, err := h.managerSvc.GetRunner(runnerID)
+	if err != nil {
+		return cl.SendMessage(NewServerNotExistsError(runnerID))
+	}
+	snapshot := runner.ConsoleSnapshot()
+	snapshotMsg := NewCmdOutputMessage(runnerID, snapshot)
+	if err := cl.SendMessage(snapshotMsg); err != nil {
+		return err
+	}
+	topicName := fmt.Sprintf("server:%s", strings.ToLower(runnerID))
+	if err := cl.Subscribe(topicName); err != nil {
+		errMsg := mapRunnerErrorMessage(runnerID, err)
+		return cl.SendMessage(errMsg)
+	}
+	return nil
+}
+
 func (h *MCManagerHandler) StartBroadcast(server *websocket.Server) {
+	// broadcast runner events to websocket clients
 	for _, runner := range h.managerSvc.Runners() {
 		runnerTopic := fmt.Sprintf("server:%s", strings.ToLower(runner.Name()))
 		topic := server.GetTopic(runnerTopic)

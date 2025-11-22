@@ -112,6 +112,7 @@ func (c *Client) Subscribe(topicName string) error {
 	topic := c.server.FindTopic(topicName)
 	if topic != nil {
 		topic.AddSubscriber(c)
+		return nil
 	}
 	return errors.New("topic not found")
 }
