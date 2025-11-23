@@ -1,44 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useConfig, loadConfig } from '@/composables/useConfig'
+import { useConfig } from '@/composables/useConfig'
 
-
-await loadConfig()
 const config = useConfig()
 
-const serverRoutes = config.value?.servers.flatMap((server) => {
-  const name = server.name.toLowerCase()
-  return [
-    {
-      path: `/servers/${name}/overview`,
-      name: `${server.name}Overview`,
-      component: () => import('../views/server/Overview.vue'),
-      meta: {
-        title: `${server.name} Overview`,
-      },
-    },
-    {
-      path: `/servers/${name}/editor`,
-      name: `${server.name}Editor`,
-      component: () => import('../views/server/CodeEditor.vue'),
-      meta: {
-        title: `${server.name} Editor`,
-      },
-    },
-    {
-      path: `/servers/${name}/console`,
-      name: `${server.name}Console`,
-      component: () => import('../views/server/Console.vue'),
-      meta: {
-        title: `${server.name} Console`,
-      },
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'NotFound',
-      component: () => import('../views/Errors/NotFound.vue'),
-    },
-  ]
-}) || []
+const serverRoutes = config.value?.servers.map((server) => ({
+  path: `/servers/${server.name.toLowerCase()}`,
+  name: `${server.name}`,
+  component: () => import('../views/server/Console.vue'),
+  meta: {
+    title: `${server.name}`,
+  },
+})) || []
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -53,7 +25,7 @@ const router = createRouter({
     {
       path: '/test',
       name: 'Test',
-      component: () => import('../views/UiElements/Badges.vue'),
+      component: () => import('../views/BlankPage.vue'),
       meta: {
         title: 'Test',
       },
@@ -61,9 +33,9 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'Dashboard',
-      component: () => import('../views/Ecommerce.vue'),
+      component: () => import('../views/BlankPage.vue'),
       meta: {
-        title: 'eCommerce Dashboard',
+        title: 'Dashboard',
       },
     },
     ...serverRoutes,
@@ -71,9 +43,3 @@ const router = createRouter({
 })
 
 export default router
-
-router.beforeEach((to, from, next) => {
-  const title = typeof to.meta.title === 'function' ? to.meta.title(to) : to.meta.title
-  document.title = `Vue.js ${title} | TailAdmin - Vue.js Tailwind CSS Dashboard Template`
-  next()
-})

@@ -186,12 +186,6 @@ const serverMenuItems = computed(() => {
     icon: item.icon || "BoxCubeIcon",
     name: item.name,
     path: `/servers/${item.name.toLowerCase()}`,
-    subItems: [
-      { name: "Overview", path: `/servers/${item.name.toLowerCase()}/overview`, pro: false, icon: "PhSpeedometerIcon" },
-      { name: "Server Editor", path: `/servers/${item.name.toLowerCase()}/editor`, pro: false, icon: "BoxIcon" },
-      { name: "Server Console", path: `/servers/${item.name.toLowerCase()}/console`, pro: false, icon: "PhTerminalWindowIcon" },
-      // { name: "Players", path: `/servers/${item.name.toLowerCase()}/players`, pro: item.proPlayers || false, icon: "GridIcon", new: item.newPlayers || false },
-    ],
   }));
 });
 

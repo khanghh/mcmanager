@@ -1,31 +1,41 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :path="[currentPageTitle]" />
-    <div
-      class="min-h-screen rounded-2xl border border-gray-200 bg-white px-5 py-7 dark:border-gray-800 dark:bg-white/[0.03] xl:px-10 xl:py-12"
-    >
-      <div class="mx-auto w-full max-w-[630px] text-center">
-        <h3
-          class="mb-4 font-semibold text-gray-800 text-theme-xl dark:text-white/90 sm:text-2xl"
-        >
-          Card Title Here
-        </h3>
-
-        <p class="text-sm text-gray-500 dark:text-gray-400 sm:text-base">
-          Start putting content on grids or panels, you can also use different
-          combinations of grids.Please check out the dashboard and other pages
-        </p>
+    <div class="h-[calc(100vh-200px)] flex flex-col">
+      <PageBreadcrumb :path="[currentPageTitle]" />
+      <div
+        class="flex-1 overflow-hidden border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <iframe
+          ref="vscodeFrame"
+          src="/vscode/"
+          class="h-full w-full border-0"
+          @load="onFrameLoad"></iframe>
       </div>
     </div>
   </AdminLayout>
 </template>
 
-<script setup>
-import { ref } from "vue";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useRoute } from "vue-router";
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 
-const currentPageTitle = ref("Blank Page");
+const route = useRoute();
+const serverName = (route.params.name as string) || route.path.split('/')[2];
+const currentPageTitle = computed(() => `Code Editor`);
+
+const vscodeFrame = ref<HTMLIFrameElement | null>(null);
+
+const onFrameLoad = () => {
+  if (!vscodeFrame.value?.contentWindow) return;
+
+  const apiURL = `${window.location.origin}/api/servers/${serverName}/fs`;
+
+  vscodeFrame.value.contentWindow.postMessage({
+    type: 'init',
+    apiURL: apiURL
+  }, '*');
+};
 </script>
 
 <style></style>

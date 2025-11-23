@@ -42,59 +42,57 @@
 <body style="margin: 0; height: 100vh; overflow: hidden;">
   <div id="root" style="height: 100vh; width: 100vw" role="main" aria-label="VS Code Editor"></div>
   <script>
-    const messageChannel = new MessageChannel();
-    const messagePorts = new Map();
-    messagePorts.set("remotefs", messageChannel.port2);
-
-    const apiURL = `${window.location.origin}/api/fs`;
-
-    require(["vs/workbench/workbench.web.main"], (workbench) => {
-      workbench.create(document.getElementById("root"), {
-        productConfiguration: {
-          extensionEnabledApiProposals: {
-            "khanghh.remotefs": [
-              "fileSearchProvider",
-              "textSearchProvider",
-              "ipc"
-            ],
+    const initialize = (apiURL) => {
+      require(["vs/workbench/workbench.web.main"], (workbench) => {
+        workbench.create(document.getElementById("root"), {
+          productConfiguration: {
+            extensionEnabledApiProposals: {
+              "khanghh.remotefs": [
+                "fileSearchProvider",
+                "textSearchProvider",
+                "ipc"
+              ],
+            },
+            nameShort: "VS Code for Web",
+            nameLong: "Visual Studio Code for Web",
+            applicationName: "code-web",
+            dataFolderName: ".vscode-web",
+            version: "1.75.0",
+            extensionsGallery: {
+              serviceUrl: "https://open-vsx.org/vscode/gallery",
+              itemUrl: "https://open-vsx.org/vscode/item",
+              resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+            },
           },
-          nameShort: "VS Code for Web",
-          nameLong: "Visual Studio Code for Web",
-          applicationName: "code-web",
-          dataFolderName: ".vscode-web",
-          version: "1.75.0",
-          extensionsGallery: {
-            serviceUrl: "https://open-vsx.org/vscode/gallery",
-            itemUrl: "https://open-vsx.org/vscode/item",
-            resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+          configurationDefaults: {
+            "files.autoSave": "off",
+            "workbench.colorTheme": "Default Dark+",
+            "remotefs.serverURL": apiURL,
           },
-        },
-        configurationDefaults: {
-          "files.autoSave": "off",
-          "workbench.colorTheme": "Default Dark+",
-          "remotefs.serverURL": apiURL,
-        },
-        additionalBuiltinExtensions: [
-          workbench.URI.from({
-            scheme: window.location.protocol === "http:" ? "http" : "https",
-            path: "/vscode/extensions/remotefs",
-          })
-        ],
-        workspaceProvider: {
-          workspace: {
-            folderUri: workbench.URI.from({
-              path: "/",
-              scheme: "remotefs"
+          additionalBuiltinExtensions: [
+            workbench.URI.from({
+              scheme: window.location.protocol === "http:" ? "http" : "https",
+              path: "/vscode/extensions/remotefs",
             })
+          ],
+          workspaceProvider: {
+            workspace: {
+              folderUri: workbench.URI.from({
+                path: "/",
+                scheme: "remotefs"
+              })
+            },
+            trusted: true
           },
-          trusted: true
-        },
-        messagePorts: messagePorts,
+        });
       });
+    }
 
-      messageChannel.port1.onmessage = (event) => {
-        console.log("Received message from remotefs extension:", event.data);
-      };
+    window.addEventListener('message', (event) => {
+      const { type, apiURL } = event.data;
+      if (type === 'init') {
+        initialize(apiURL);
+      }
     });
 
   </script>

@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-screen xl:flex">
-    <AppSidebar />
+  <div class="h-screen xl:flex">
+    <app-sidebar />
     <Backdrop />
     <div
-      class="flex-1 transition-all duration-300 ease-in-out"
+      class="flex-1 flex flex-col transition-all duration-300 ease-in-out"
       :class="[isExpanded || isHovered ? 'lg:ml-[290px]' : 'lg:ml-[90px]']">
-      <AppHeader />
-      <div class="p-4 mx-auto md:p-6" :class="{ 'max-w-(--breakpoint-2xl)': !fullWidth }">
+      <app-header />
+      <div class="flex-1 overflow-hidden">
         <slot></slot>
       </div>
     </div>
@@ -20,10 +20,4 @@ import { useSidebar } from '@/composables/useSidebar'
 import Backdrop from './Backdrop.vue'
 const { isExpanded, isHovered } = useSidebar()
 
-defineProps({
-  fullWidth: {
-    type: Boolean,
-    default: false
-  }
-})
 </script>

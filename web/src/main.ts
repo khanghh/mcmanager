@@ -11,12 +11,11 @@ import App from './App.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { initWebsocket } from '@/composables/useWebsocket'
 import InternalServerError from '@/views/Errors/InternalServer.vue'
+import { loadConfig } from '@/composables/useConfig'
 
 async function initializeApp() {
-  let router;
   try {
-    const routerModule = await import('./router');
-    router = routerModule.default;
+    await loadConfig()
   } catch (err) {
     console.error('Failed to load config or router:', err)
     const errorApp = createApp(InternalServerError, {
@@ -33,6 +32,7 @@ async function initializeApp() {
   }
   await initWebsocket(wsUrl);
 
+  const router = (await import('./router')).default;
   const app = createApp(App)
   app.use(router)
   app.use(VueApexCharts)

@@ -22,17 +22,21 @@ export class RemoteFS implements FileSystemProvider {
   static scheme = 'remotefs';
 
   private readonly disposable: Disposable;
-  private apiURL: string;
+  private apiAxios;
 
   constructor(serverURL: string) {
-    this.apiURL = serverURL.replace(/\/$/, '');
+    const apiURL = serverURL.replace(/\/$/, '');
+    this.apiAxios = axios.create({
+      baseURL: apiURL,
+      validateStatus: () => true,
+    });
     this.disposable = Disposable.from(
       workspace.registerFileSystemProvider(RemoteFS.scheme, this, { isCaseSensitive: true }),
     );
   }
 
-  updateServerURL(serverURL: string) {
-    this.apiURL = serverURL.replace(/\/$/, '');
+  updateServerURL(newURL: string) {
+    this.apiAxios.defaults.baseURL = newURL.replace(/\/$/, '');
   }
 
   dispose() {
@@ -43,10 +47,8 @@ export class RemoteFS implements FileSystemProvider {
 
   async stat(uri: Uri): Promise<FileStat> {
     const path = uri.path.substring(1); // remove leading /
-    const url = `${this.apiURL}/${path}`;
-    const response = await axios.get(url, {
-      params: { stat: true },
-      validateStatus: () => true
+    const response = await this.apiAxios.get(path, {
+      params: { stat: "true" },
     });
     if (response.status < 200 || response.status >= 300) {
       throw this.mapError(response);
@@ -62,8 +64,7 @@ export class RemoteFS implements FileSystemProvider {
 
   async readDirectory(uri: Uri): Promise<[string, FileType][]> {
     const path = uri.path.substring(1);
-    const url = `${this.apiURL}/${path}`;
-    const response = await axios.get(url, { validateStatus: () => true });
+    const response = await this.apiAxios.get(path);
     if (response.status < 200 || response.status >= 300) {
       throw this.mapError(response);
     }
@@ -75,12 +76,11 @@ export class RemoteFS implements FileSystemProvider {
 
   async readFile(uri: Uri): Promise<Uint8Array> {
     const path = uri.path.substring(1);
-    const url = `${this.apiURL}/${path}`;
-    const response = await axios.get(url, { responseType: 'arraybuffer', validateStatus: () => true });
+    const response = await this.apiAxios.get(path);
     if (response.status < 200 || response.status >= 300) {
       throw this.mapError(response);
     }
-    return new Uint8Array(response.data as ArrayBuffer);
+    return new TextEncoder().encode(response.data);
   }
 
   async writeFile(uri: Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }): Promise<void> {
@@ -94,7 +94,6 @@ export class RemoteFS implements FileSystemProvider {
     if (options.create) {
       // if create, use POST to create empty file or upload file to parent directory path
       const parent = parts.join('/');
-      const url = `${this.apiURL}/${parent}`;
       let response;
       if (content.length > 0) {
         const form = new FormData();
@@ -102,15 +101,14 @@ export class RemoteFS implements FileSystemProvider {
         if (options.overwrite) {
           form.set('overwrite', 'true');
         }
-        response = await axios.post(url, form, { validateStatus: () => true, });
+        response = await this.apiAxios.post(parent, form);
       } else {
         const body: any = { path: fileName, type: 'file' };
         if (options.overwrite) {
           body.overwrite = true;
         }
-        response = await axios.post(url, body, {
+        response = await this.apiAxios.post(parent, body, {
           headers: { 'Content-Type': 'application/json' },
-          validateStatus: () => true,
         });
       }
       if (response.status !== axios.HttpStatusCode.Created) {
@@ -120,10 +118,8 @@ export class RemoteFS implements FileSystemProvider {
     }
 
     // default, use PUT to write content to file path
-    const url = `${this.apiURL}/${path}`;
-    const response = await axios.put(url, buffer, {
+    const response = await this.apiAxios.put(path, buffer, {
       headers: { 'Content-Type': 'application/octet-stream' },
-      validateStatus: () => true
     });
     if (response.status < 200 || response.status >= 300) {
       throw this.mapError(response);
@@ -136,10 +132,8 @@ export class RemoteFS implements FileSystemProvider {
   async rename(oldUri: Uri, newUri: Uri, options: { overwrite: boolean }): Promise<void> {
     const oldPath = oldUri.path.substring(1);
     const newName = newUri.path.substring(1);
-    const url = `${this.apiURL}/${oldPath}`;
-    const response = await axios.patch(url, { newPath: newName, overwrite: options.overwrite }, {
+    const response = await this.apiAxios.patch(oldPath, { newPath: newName, overwrite: options.overwrite }, {
       headers: { 'Content-Type': 'application/json' },
-      validateStatus: () => true,
     });
     if (response.status < 200 || response.status >= 300) {
       throw this.mapError(response);
@@ -152,10 +146,8 @@ export class RemoteFS implements FileSystemProvider {
 
   async delete(uri: Uri, opts: { recursive: boolean, useTrash: boolean }): Promise<void> {
     const path = uri.path.substring(1);
-    const url = `${this.apiURL}/${path}`;
-    const response = await axios.delete(url, {
+    const response = await this.apiAxios.delete(path, {
       params: { recursive: opts.recursive },
-      validateStatus: () => true
     });
     if (response.status < 200 || response.status >= 300) {
       throw this.mapError(response);
@@ -166,11 +158,9 @@ export class RemoteFS implements FileSystemProvider {
   async createDirectory(uri: Uri): Promise<void> {
     const basename = this._basename(uri.path);
     const parent = this._dirname(uri.path);
-    const url = `${this.apiURL}/${parent}`;
     const body = { path: basename, type: 'directory' };
-    const response = await axios.post(url, body, {
+    const response = await this.apiAxios.post(parent, body, {
       headers: { 'Content-Type': 'application/json' },
-      validateStatus: () => true
     });
     if (response.status < 200 || response.status >= 300) {
       throw this.mapError(response);
@@ -207,10 +197,17 @@ export class RemoteFS implements FileSystemProvider {
   }
 
   private mapError(response: any): Error {
-    const data = response?.data ?? {};
-    const code = data?.code ?? '';
+    let error;
+    const data = response?.data;
+    if (data && data instanceof ArrayBuffer) {
+      error = new TextDecoder().decode(new Uint8Array(data));
+    } else {
+      error = data.error;
+    }
 
-    switch (code) {
+    const reason = error?.reason ?? '';
+
+    switch (reason) {
       case 'FILE_EXISTS':
         return FileSystemError.FileExists();
       case 'FILE_NOT_FOUND':
@@ -225,7 +222,7 @@ export class RemoteFS implements FileSystemProvider {
       return new Error('Internal server error');
     }
 
-    const message = data?.error ?? response?.statusText ?? 'Unknown error';
+    const message = error?.message ?? response?.statusText ?? 'Unknown error';
     return new Error(message);
   }
 

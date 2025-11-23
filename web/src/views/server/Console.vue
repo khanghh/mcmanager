@@ -9,23 +9,30 @@ import { MessageType, Message, CmdConnect, Unsubscribe, CmdInput } from "@/gener
 import Button from "@/components/ui/Button.vue";
 import Badge from "@/components/ui/Badge.vue";
 import {
-  PhHardDriveIcon,
   PhPlayIcon,
   PhStopIcon,
   PhXIcon,
-  PhCpuIcon,
-  PhMemoryIcon,
   PhArrowClockwiseIcon,
   PhTrashIcon,
   PhPaperPlaneRightIcon,
   PhUsersThreeIcon,
   PhClockIcon,
+  PhTerminalWindowIcon,
+  PhFileTextIcon,
+  PhFolderIcon,
+  PhPlugIcon,
+  PhArchiveIcon,
+  PhGearIcon,
 } from "@/icons";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 import { useApi, ServerState, ApiError } from "@/composables/useApi";
 import { useWebsocket, UseWebsocket } from "@/composables/useWebsocket";
 import { useToast } from "@/composables/useToast";
 import { useClipboard } from '@/composables/useClipboard';
+import CPUCard from "@/components/server/CPUCard.vue";
+import MemoryCard from "@/components/server/MemoryCard.vue";
+import DiskCard from "@/components/server/DiskCard.vue";
+import UptimeCard from "@/components/server/UptimeCard.vue";
 const { copyText } = useClipboard()
 
 const route = useRoute();
@@ -45,6 +52,23 @@ const uptime: Ref<number> = ref(0);
 
 const serverName = (route.params.name as string) || route.path.split('/')[2];
 const quickCommands = ["help", "list", "stop", "reload"] as const;
+const activeTab = ref<'console' | 'code-editor' | 'file-manager' | 'plugins' | 'backups' | 'settings'>('console');
+
+const switchTab = (tab: 'console' | 'code-editor' | 'file-manager' | 'plugins' | 'backups' | 'settings') => {
+  activeTab.value = tab;
+
+  // Fix terminal display when switching to console tab
+  if (tab === 'console' && fitAddon) {
+    // Use nextTick to ensure the DOM has updated before resizing
+    setTimeout(() => {
+      try {
+        fitAddon.fit();
+      } catch (e) {
+        console.error('Failed to fit terminal:', e);
+      }
+    }, 100);
+  }
+};
 
 let term!: Terminal;
 let fitAddon!: FitAddon;
@@ -90,14 +114,7 @@ const diskPercentage = computed(() => {
 });
 
 // Format helpers
-const formatBytes = (bytes: number | undefined) => {
-  if (bytes === undefined) return '0 B';
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+
 
 const formatUptime = (seconds: number | undefined) => {
   if (!seconds) return '00:00:00';
@@ -106,6 +123,9 @@ const formatUptime = (seconds: number | undefined) => {
   const s = Math.floor(seconds % 60);
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
+
+const formattedUptime = computed(() => formatUptime(uptime.value));
+
 
 const initTerminal = () => {
   if (!terminalContainer.value) return;
@@ -227,6 +247,19 @@ const fetchServerState = async () => {
   }
 }
 
+const vscodeFrame = ref<HTMLIFrameElement | null>(null);
+
+const onFrameLoad = () => {
+  if (!vscodeFrame.value?.contentWindow) return;
+
+  const apiURL = `${window.location.origin}/api/servers/${serverName}/fs`;
+
+  vscodeFrame.value.contentWindow.postMessage({
+    type: 'init',
+    apiURL: apiURL
+  }, '*');
+};
+
 onMounted(async () => {
   // Load server state first; if not found show 404 and bail out
   await fetchServerState();
@@ -290,140 +323,143 @@ onBeforeUnmount(() => {
 const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"]);
 </script>
 <template>
-  <AdminLayout>
+  <AdminLayout full-width>
     <PageBreadcrumb :path="breadcrumbPath" />
-    <div
-      class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="mb-6 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <h1 class="text-2xl font-semibold text-gray-900 dark:text-white first-letter:uppercase">{{ serverName }}</h1>
-          <Badge :variant="statusBadgeVariant">
-            <span :class="['h-2 w-2 rounded-full', statusDotClasses]"></span>
-            <span class="first-letter:uppercase">{{ serverStatus }}</span>
-          </Badge>
+
+    <!-- Control Bar Card -->
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] mb-6">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <!-- Left: Server Info -->
+        <div class="flex flex-wrap items-center gap-4 sm:gap-6">
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white first-letter:uppercase">{{ serverName }}
+            </h1>
+            <Badge :variant="statusBadgeVariant">
+              <span :class="['h-2 w-2 rounded-full', statusDotClasses]"></span>
+              <span class="first-letter:uppercase">{{ serverStatus }}</span>
+            </Badge>
+          </div>
+          <div class="hidden sm:block h-8 w-px bg-gray-200 dark:bg-gray-800"></div>
+          <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-gray-600 dark:text-gray-400">
+            <div class="flex items-center gap-2">
+              <PhUsersThreeIcon class="text-indigo-500" weight="fill" />
+              <span>Online: <strong class="text-gray-900 dark:text-white">{{ isRunning ? '0 / 0' : '0 / 0'
+                  }}</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <PhClockIcon class="text-purple-500" weight="fill" />
+              <span>Uptime: <strong class="text-gray-900 dark:text-white">{{ formattedUptime }}</strong></span>
+            </div>
+          </div>
         </div>
-        <div class="flex items-center gap-3">
-          <Badge>
-            <PhUsersThreeIcon weight="fill" />
-            <span>Online: <strong class="ml-1">{{ isRunning ? '0 / 0' : '0 / 0' }}</strong></span>
-          </Badge>
+
+        <!-- Right: Action Buttons -->
+        <div
+          class="flex flex-nowrap items-center gap-3 justify-end overflow-x-auto pb-2 sm:pb-0">
+          <Button v-if="isStopped" @click="startServer" size="md" variant="primary" class="whitespace-nowrap">
+            <PhPlayIcon weight="fill" />
+            Start
+          </Button>
+          <template v-else>
+            <Button v-if="!isStopped"
+              @click="stopServer" :disabled="serverStatus === 'stopping'" size="md" variant="danger"
+              class="whitespace-nowrap">
+              <PhStopIcon weight="fill" />
+              Stop
+            </Button>
+            <Button v-if="!isStopped" @click="restartServer" size="md" variant="primary" soft outline
+              class="whitespace-nowrap">
+              <PhArrowClockwiseIcon />
+              Restart
+            </Button>
+            <Button v-if="!isStopped"
+              @click="killServer" size="md" variant="danger" soft outline class="whitespace-nowrap">
+              <PhXIcon />
+              Kill
+            </Button>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Tabs Navigation - Full Width -->
+      <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <div class="grid grid-cols-6">
+          <button @click="switchTab('console')" :class="[
+            'py-6 px-6 font-medium text-base flex items-center justify-center gap-2 transition-colors',
+            activeTab === 'console'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          ]">
+            <PhTerminalWindowIcon class="w-5 h-5" />
+            <span>Console</span>
+          </button>
+          <button @click="switchTab('code-editor')" :class="[
+            'py-6 px-6 font-medium text-base flex items-center justify-center gap-2 transition-colors',
+            activeTab === 'code-editor'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          ]">
+            <PhFileTextIcon class="w-5 h-5" />
+            <span>Code Editor</span>
+          </button>
+          <button @click="switchTab('file-manager')" :class="[
+            'py-6 px-6 font-medium text-base flex items-center justify-center gap-2 transition-colors',
+            activeTab === 'file-manager'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          ]">
+            <PhFolderIcon class="w-5 h-5" />
+            <span>File Manager</span>
+          </button>
+          <button @click="switchTab('plugins')" :class="[
+            'py-6 px-6 font-medium text-base flex items-center justify-center gap-2 transition-colors',
+            activeTab === 'plugins'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          ]">
+            <PhPlugIcon class="w-5 h-5" />
+            <span>Plugins</span>
+          </button>
+          <button @click="switchTab('backups')" :class="[
+            'py-6 px-6 font-medium text-base flex items-center justify-center gap-2 transition-colors',
+            activeTab === 'backups'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          ]">
+            <PhArchiveIcon class="w-5 h-5" />
+            <span>Backups</span>
+          </button>
+          <button @click="switchTab('settings')" :class="[
+            'py-6 px-6 font-medium text-base flex items-center justify-center gap-2 transition-colors',
+            activeTab === 'settings'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          ]">
+            <PhGearIcon class="w-5 h-5" />
+            <span>Settings</span>
+          </button>
         </div>
       </div>
 
-      <div class="flex flex-col gap-4">
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <!-- CPU Card -->
+      <!-- Tab Contents -->
+      <div>
+        <!-- Console Tab Content -->
+        <div v-show="activeTab === 'console'" class="flex flex-col gap-4 p-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <CPUCard :cpuPercentage="cpuPercentage" :cpuCount="cpuCount" />
+            <MemoryCard :usage="serverState?.memoryUsage" :limit="serverState?.memoryLimit"
+              :percentage="memoryPercentage" />
+            <DiskCard :usage="serverState?.diskUsage" :size="serverState?.diskSize" :percentage="diskPercentage" />
+            <UptimeCard :uptime="uptime" />
+          </div>
           <div
-            class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">CPU Usage</h3>
-              <div
-                class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <PhCpuIcon class="w-5 h-5" />
-              </div>
-            </div>
-            <span class="flex items-end justify-between">
-              <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ cpuPercentage }}%</p>
-              <p class="text-md text-gray-500 dark:text-gray-400 mb-2 text-right">
-                <template v-if="cpuCount !== undefined">Cores: {{ cpuCount }}</template>
-                <template v-else>Cores: ?</template>
-              </p>
-            </span>
-            <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-              <div class="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                :style="{ width: `${Math.min(cpuPercentage, 100)}%` }"></div>
-            </div>
-          </div>
-
-          <!-- Memory Card -->
-          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Memory</h3>
-              <div
-                class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                <PhMemoryIcon class="w-5 h-5" />
-              </div>
-            </div>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {{ formatBytes(serverState?.memoryUsage) }} / {{ serverState?.memoryLimit === 0 ? 'Unlimited' :
-                formatBytes(serverState?.memoryLimit) }}</p>
-            <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-              <div class="bg-purple-500 h-2 rounded-full transition-all duration-300"
-                :style="{ width: `${memoryPercentage}%` }">
-              </div>
-            </div>
-          </div>
-
-          <!-- Disk Card -->
-          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Disk Usage</h3>
-              <div
-                class="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
-                <PhHardDriveIcon class="w-5 h-5" />
-              </div>
-            </div>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              <template v-if="serverState?.diskUsage !== undefined && serverState?.diskSize !== undefined">
-                {{ formatBytes(serverState.diskUsage) }} / {{ formatBytes(serverState.diskSize) }}
-              </template>
-              <template v-else>
-                0 B / 0 B
-              </template>
-            </p>
-            <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-              <div class="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                :style="{ width: `${diskPercentage}%` }">
-              </div>
-            </div>
-          </div>
-
-          <!-- Uptime Card -->
-          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Uptime</h3>
-              <div
-                class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                <PhClockIcon class="w-5 h-5" />
-              </div>
-            </div>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ formatUptime(uptime) }}
-            </p>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Since last restart</p>
-          </div>
-        </div>
-
-        <!-- Console Card -->
-        <div
-          class="flex flex-col rounded-xl border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm overflow-hidden">
-          <div
-            class="flex items-center justify-between border-b border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
-            <div class="flex items-center gap-2 pl-2">
-              <h3 class="font-semibold text-gray-900 dark:text-white">Server Console</h3>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="flex items-center gap-3">
-                <Button v-if="isStopped" @click="startServer" size="md" variant="primary">
-                  <PhPlayIcon weight="fill" />
-                  Start
-                </Button>
-                <template v-else>
-                  <Button v-if="!isStopped"
-                    @click="stopServer" :disabled="serverStatus === 'stopping'" size="md" variant="danger">
-                    <PhStopIcon weight="fill" />
-                    Stop
-                  </Button>
-                  <Button v-if="!isStopped" @click="restartServer" size="md" variant="primary" soft outline>
-                    <PhArrowClockwiseIcon />
-                    Restart
-                  </Button>
-                  <Button v-if="!isStopped"
-                    @click="killServer" size="md" variant="danger" soft outline>
-                    <PhXIcon />
-                    Kill
-                  </Button>
-                </template>
+            class="flex flex-col rounded-xl border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm overflow-hidden">
+            <div
+              class="flex items-center justify-between border-b border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+              <div class="flex items-center gap-2 pl-2">
+                <h3 class="font-semibold text-gray-900 dark:text-white">Server Console</h3>
               </div>
               <div class="flex items-center gap-3">
                 <Button @click="clearConsole" size="md" variant="secondary" outline>
@@ -432,31 +468,89 @@ const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"])
                 </Button>
               </div>
             </div>
-          </div>
 
-          <!-- Terminal -->
-          <div class="h-[800px]">
-            <div ref="terminalContainer" class="h-full w-full"></div>
-          </div>
+            <!-- Terminal -->
+            <div class="h-[50vh]">
+              <div ref="terminalContainer" class="h-full w-full"></div>
+            </div>
 
-          <!-- Command Input -->
-          <div class="border-t border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
-            <div class="relative">
-              <input ref="commandInput" v-model="command" @keydown.enter="sendCommand" type="text"
-                placeholder="Type a command..."
-                class="w-full rounded-lg border border-gray-300 bg-white py-3 pl-4 pr-[100px] text-sm text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-slate-600 dark:bg-slate-800 dark:text-gray-200 dark:placeholder:text-gray-400" />
-              <div class="absolute right-2 top-1/2 -translate-y-1/2">
-                <Button @click="sendCommand" size="md" variant="primary">
-                  <PhPaperPlaneRightIcon />
-                  Send
-                </Button>
+            <!-- Command Input -->
+            <div class="border-t border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+              <div class="relative">
+                <input ref="commandInput" v-model="command" @keydown.enter="sendCommand" type="text"
+                  placeholder="Type a command..."
+                  class="w-full rounded-lg border border-gray-300 bg-white py-3 pl-4 pr-[100px] text-sm text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-slate-600 dark:bg-slate-800 dark:text-gray-200 dark:placeholder:text-gray-400" />
+                <div class="absolute right-2 top-1/2 -translate-y-1/2">
+                  <Button @click="sendCommand" size="md" variant="primary">
+                    <PhPaperPlaneRightIcon />
+                    Send
+                  </Button>
+                </div>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <span>Quick commands:</span>
+                <button v-for="qc in quickCommands" :key="qc" class="hover:text-blue-500 transition-colors"
+                  @click="applyQuickCommand(qc)">{{ qc }}</button>
               </div>
             </div>
-            <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-              <span>Quick commands:</span>
-              <button v-for="qc in quickCommands" :key="qc" class="hover:text-blue-500 transition-colors"
-                @click="applyQuickCommand(qc)">{{ qc }}</button>
+          </div>
+        </div>
+
+        <!-- Code Editor Tab Content -->
+        <div v-show="activeTab === 'code-editor'" class="h-[calc(100vh-200px)]">
+          <iframe ref="vscodeFrame" src="/vscode/" class="h-full w-full border-0 rounded-lg"
+            @load="onFrameLoad"></iframe>
+        </div>
+
+        <!-- File Manager Tab Content -->
+        <div v-show="activeTab === 'file-manager'" class="p-6">
+          <div class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-6">
+              <PhFolderIcon class="w-12 h-12 text-gray-400 dark:text-gray-500" />
             </div>
+            <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">File Manager</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md">
+              File management functionality will be available here soon.
+            </p>
+          </div>
+        </div>
+
+        <!-- Plugins Tab Content -->
+        <div v-show="activeTab === 'plugins'" class="p-6">
+          <div class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-6">
+              <PhPlugIcon class="w-12 h-12 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Plugins</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md">
+              Plugin management functionality will be available here soon.
+            </p>
+          </div>
+        </div>
+
+        <!-- Backups Tab Content -->
+        <div v-show="activeTab === 'backups'" class="p-6">
+          <div class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-6">
+              <PhArchiveIcon class="w-12 h-12 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Backups</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md">
+              Backup management functionality will be available here soon.
+            </p>
+          </div>
+        </div>
+
+        <!-- Settings Tab Content -->
+        <div v-show="activeTab === 'settings'" class="p-6">
+          <div class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-6">
+              <PhGearIcon class="w-12 h-12 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Settings</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md">
+              Server settings will be available here soon.
+            </p>
           </div>
         </div>
       </div>
