@@ -2,15 +2,15 @@ import * as $protobuf from "protobufjs";
 import Long = require("long");
 /** MessageType enum. */
 export enum MessageType {
-    UNKNOWN = 0,
+    UNKOWN = 0,
     ERROR = 1,
-    SUBSCRIBE = 2,
-    UNSUBSCRIBE = 3,
-    CMD_ATTACH = 100,
-    CMD_INPUT = 101,
-    CMD_OUTPUT = 102,
-    CMD_RESIZE = 104,
-    CMD_STATUS = 105
+    CMD_OUTPUT = 257,
+    CMD_STATUS = 258,
+    SUBSCRIBE = 32769,
+    UNSUBSCRIBE = 32770,
+    CMD_INPUT = 33025,
+    CMD_RESIZE = 33026,
+    CMD_CONNECT = 33027
 }
 
 /** Represents an ErrorInfo. */
@@ -481,6 +481,96 @@ export class CmdStatus implements ICmdStatus {
     public static getTypeUrl(typeUrlPrefix?: string): string;
 }
 
+/** Represents a CmdConnect. */
+export class CmdConnect implements ICmdConnect {
+
+    /**
+     * Constructs a new CmdConnect.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: ICmdConnect);
+
+    /** CmdConnect id. */
+    public id: string;
+
+    /**
+     * Creates a new CmdConnect instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns CmdConnect instance
+     */
+    public static create(properties?: ICmdConnect): CmdConnect;
+
+    /**
+     * Encodes the specified CmdConnect message. Does not implicitly {@link CmdConnect.verify|verify} messages.
+     * @param message CmdConnect message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: ICmdConnect, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified CmdConnect message, length delimited. Does not implicitly {@link CmdConnect.verify|verify} messages.
+     * @param message CmdConnect message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: ICmdConnect, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a CmdConnect message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns CmdConnect
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): CmdConnect;
+
+    /**
+     * Decodes a CmdConnect message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns CmdConnect
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): CmdConnect;
+
+    /**
+     * Verifies a CmdConnect message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a CmdConnect message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns CmdConnect
+     */
+    public static fromObject(object: { [k: string]: any }): CmdConnect;
+
+    /**
+     * Creates a plain object from a CmdConnect message. Also converts values to other types if specified.
+     * @param message CmdConnect
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: CmdConnect, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this CmdConnect to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for CmdConnect
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
 /** Represents a Subscribe. */
 export class Subscribe implements ISubscribe {
 
@@ -694,8 +784,11 @@ export class Message implements IMessage {
     /** Message cmdStatus. */
     public cmdStatus?: (ICmdStatus|null);
 
+    /** Message cmdConnect. */
+    public cmdConnect?: (ICmdConnect|null);
+
     /** Message payload. */
-    public payload?: ("error"|"subscribe"|"unsubscribe"|"cmdInput"|"cmdOutput"|"cmdResize"|"cmdStatus");
+    public payload?: ("error"|"subscribe"|"unsubscribe"|"cmdInput"|"cmdOutput"|"cmdResize"|"cmdStatus"|"cmdConnect");
 
     /**
      * Creates a new Message instance using the specified properties.

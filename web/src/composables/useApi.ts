@@ -14,9 +14,9 @@ export type ApiEnvelope<T> = {
   }
 }
 
-export type ServerStatus = 'running' | 'stopping' | 'stopped'
+export type ServerStatus = 'running' | 'stopping' | 'stopped' | 'unknown'
 
-export interface ServerState {
+export type ServerState = {
   status: ServerStatus
   tps: number
   pid?: number
@@ -25,9 +25,11 @@ export interface ServerState {
   cpuUsage?: number
   cpuLimit?: number
   uptimeSec?: number
+  diskUsage?: number
+  diskSize?: number
 }
 
-export interface CommandRequest {
+export type CommandRequest = {
   command: string
 }
 

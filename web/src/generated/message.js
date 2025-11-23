@@ -11,27 +11,27 @@ const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
  * MessageType enum.
  * @exports MessageType
  * @enum {number}
- * @property {number} UNKNOWN=0 UNKNOWN value
+ * @property {number} UNKOWN=0 UNKOWN value
  * @property {number} ERROR=1 ERROR value
- * @property {number} SUBSCRIBE=2 SUBSCRIBE value
- * @property {number} UNSUBSCRIBE=3 UNSUBSCRIBE value
- * @property {number} CMD_ATTACH=100 CMD_ATTACH value
- * @property {number} CMD_INPUT=101 CMD_INPUT value
- * @property {number} CMD_OUTPUT=102 CMD_OUTPUT value
- * @property {number} CMD_RESIZE=104 CMD_RESIZE value
- * @property {number} CMD_STATUS=105 CMD_STATUS value
+ * @property {number} CMD_OUTPUT=257 CMD_OUTPUT value
+ * @property {number} CMD_STATUS=258 CMD_STATUS value
+ * @property {number} SUBSCRIBE=32769 SUBSCRIBE value
+ * @property {number} UNSUBSCRIBE=32770 UNSUBSCRIBE value
+ * @property {number} CMD_INPUT=33025 CMD_INPUT value
+ * @property {number} CMD_RESIZE=33026 CMD_RESIZE value
+ * @property {number} CMD_CONNECT=33027 CMD_CONNECT value
  */
 export const MessageType = $root.MessageType = (() => {
     const valuesById = {}, values = Object.create(valuesById);
-    values[valuesById[0] = "UNKNOWN"] = 0;
+    values[valuesById[0] = "UNKOWN"] = 0;
     values[valuesById[1] = "ERROR"] = 1;
-    values[valuesById[2] = "SUBSCRIBE"] = 2;
-    values[valuesById[3] = "UNSUBSCRIBE"] = 3;
-    values[valuesById[100] = "CMD_ATTACH"] = 100;
-    values[valuesById[101] = "CMD_INPUT"] = 101;
-    values[valuesById[102] = "CMD_OUTPUT"] = 102;
-    values[valuesById[104] = "CMD_RESIZE"] = 104;
-    values[valuesById[105] = "CMD_STATUS"] = 105;
+    values[valuesById[257] = "CMD_OUTPUT"] = 257;
+    values[valuesById[258] = "CMD_STATUS"] = 258;
+    values[valuesById[32769] = "SUBSCRIBE"] = 32769;
+    values[valuesById[32770] = "UNSUBSCRIBE"] = 32770;
+    values[valuesById[33025] = "CMD_INPUT"] = 33025;
+    values[valuesById[33026] = "CMD_RESIZE"] = 33026;
+    values[valuesById[33027] = "CMD_CONNECT"] = 33027;
     return values;
 })();
 
@@ -1221,6 +1221,211 @@ export const CmdStatus = $root.CmdStatus = (() => {
     return CmdStatus;
 })();
 
+export const CmdConnect = $root.CmdConnect = (() => {
+
+    /**
+     * Properties of a CmdConnect.
+     * @exports ICmdConnect
+     * @interface ICmdConnect
+     * @property {string|null} [id] CmdConnect id
+     */
+
+    /**
+     * Constructs a new CmdConnect.
+     * @exports CmdConnect
+     * @classdesc Represents a CmdConnect.
+     * @implements ICmdConnect
+     * @constructor
+     * @param {ICmdConnect=} [properties] Properties to set
+     */
+    function CmdConnect(properties) {
+        if (properties)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * CmdConnect id.
+     * @member {string} id
+     * @memberof CmdConnect
+     * @instance
+     */
+    CmdConnect.prototype.id = "";
+
+    /**
+     * Creates a new CmdConnect instance using the specified properties.
+     * @function create
+     * @memberof CmdConnect
+     * @static
+     * @param {ICmdConnect=} [properties] Properties to set
+     * @returns {CmdConnect} CmdConnect instance
+     */
+    CmdConnect.create = function create(properties) {
+        return new CmdConnect(properties);
+    };
+
+    /**
+     * Encodes the specified CmdConnect message. Does not implicitly {@link CmdConnect.verify|verify} messages.
+     * @function encode
+     * @memberof CmdConnect
+     * @static
+     * @param {ICmdConnect} message CmdConnect message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    CmdConnect.encode = function encode(message, writer) {
+        if (!writer)
+            writer = $Writer.create();
+        if (message.id != null && Object.hasOwnProperty.call(message, "id"))
+            writer.uint32(/* id 1, wireType 2 =*/10).string(message.id);
+        return writer;
+    };
+
+    /**
+     * Encodes the specified CmdConnect message, length delimited. Does not implicitly {@link CmdConnect.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof CmdConnect
+     * @static
+     * @param {ICmdConnect} message CmdConnect message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    CmdConnect.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a CmdConnect message from the specified reader or buffer.
+     * @function decode
+     * @memberof CmdConnect
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {CmdConnect} CmdConnect
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    CmdConnect.decode = function decode(reader, length, error) {
+        if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.CmdConnect();
+        while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+                break;
+            switch (tag >>> 3) {
+            case 1: {
+                    message.id = reader.string();
+                    break;
+                }
+            default:
+                reader.skipType(tag & 7);
+                break;
+            }
+        }
+        return message;
+    };
+
+    /**
+     * Decodes a CmdConnect message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof CmdConnect
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {CmdConnect} CmdConnect
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    CmdConnect.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+        return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a CmdConnect message.
+     * @function verify
+     * @memberof CmdConnect
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    CmdConnect.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.id != null && message.hasOwnProperty("id"))
+            if (!$util.isString(message.id))
+                return "id: string expected";
+        return null;
+    };
+
+    /**
+     * Creates a CmdConnect message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof CmdConnect
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {CmdConnect} CmdConnect
+     */
+    CmdConnect.fromObject = function fromObject(object) {
+        if (object instanceof $root.CmdConnect)
+            return object;
+        let message = new $root.CmdConnect();
+        if (object.id != null)
+            message.id = String(object.id);
+        return message;
+    };
+
+    /**
+     * Creates a plain object from a CmdConnect message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof CmdConnect
+     * @static
+     * @param {CmdConnect} message CmdConnect
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    CmdConnect.toObject = function toObject(message, options) {
+        if (!options)
+            options = {};
+        let object = {};
+        if (options.defaults)
+            object.id = "";
+        if (message.id != null && message.hasOwnProperty("id"))
+            object.id = message.id;
+        return object;
+    };
+
+    /**
+     * Converts this CmdConnect to JSON.
+     * @function toJSON
+     * @memberof CmdConnect
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    CmdConnect.prototype.toJSON = function toJSON() {
+        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for CmdConnect
+     * @function getTypeUrl
+     * @memberof CmdConnect
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    CmdConnect.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+        if (typeUrlPrefix === undefined) {
+            typeUrlPrefix = "type.googleapis.com";
+        }
+        return typeUrlPrefix + "/CmdConnect";
+    };
+
+    return CmdConnect;
+})();
+
 export const Subscribe = $root.Subscribe = (() => {
 
     /**
@@ -1645,6 +1850,7 @@ export const Message = $root.Message = (() => {
      * @property {ICmdOutput|null} [cmdOutput] Message cmdOutput
      * @property {ICmdResize|null} [cmdResize] Message cmdResize
      * @property {ICmdStatus|null} [cmdStatus] Message cmdStatus
+     * @property {ICmdConnect|null} [cmdConnect] Message cmdConnect
      */
 
     /**
@@ -1726,17 +1932,25 @@ export const Message = $root.Message = (() => {
      */
     Message.prototype.cmdStatus = null;
 
+    /**
+     * Message cmdConnect.
+     * @member {ICmdConnect|null|undefined} cmdConnect
+     * @memberof Message
+     * @instance
+     */
+    Message.prototype.cmdConnect = null;
+
     // OneOf field names bound to virtual getters and setters
     let $oneOfFields;
 
     /**
      * Message payload.
-     * @member {"error"|"subscribe"|"unsubscribe"|"cmdInput"|"cmdOutput"|"cmdResize"|"cmdStatus"|undefined} payload
+     * @member {"error"|"subscribe"|"unsubscribe"|"cmdInput"|"cmdOutput"|"cmdResize"|"cmdStatus"|"cmdConnect"|undefined} payload
      * @memberof Message
      * @instance
      */
     Object.defineProperty(Message.prototype, "payload", {
-        get: $util.oneOfGetter($oneOfFields = ["error", "subscribe", "unsubscribe", "cmdInput", "cmdOutput", "cmdResize", "cmdStatus"]),
+        get: $util.oneOfGetter($oneOfFields = ["error", "subscribe", "unsubscribe", "cmdInput", "cmdOutput", "cmdResize", "cmdStatus", "cmdConnect"]),
         set: $util.oneOfSetter($oneOfFields)
     });
 
@@ -1780,6 +1994,8 @@ export const Message = $root.Message = (() => {
             $root.CmdResize.encode(message.cmdResize, writer.uint32(/* id 7, wireType 2 =*/58).fork()).ldelim();
         if (message.cmdStatus != null && Object.hasOwnProperty.call(message, "cmdStatus"))
             $root.CmdStatus.encode(message.cmdStatus, writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
+        if (message.cmdConnect != null && Object.hasOwnProperty.call(message, "cmdConnect"))
+            $root.CmdConnect.encode(message.cmdConnect, writer.uint32(/* id 9, wireType 2 =*/74).fork()).ldelim();
         return writer;
     };
 
@@ -1848,6 +2064,10 @@ export const Message = $root.Message = (() => {
                     message.cmdStatus = $root.CmdStatus.decode(reader, reader.uint32());
                     break;
                 }
+            case 9: {
+                    message.cmdConnect = $root.CmdConnect.decode(reader, reader.uint32());
+                    break;
+                }
             default:
                 reader.skipType(tag & 7);
                 break;
@@ -1890,13 +2110,13 @@ export const Message = $root.Message = (() => {
                 return "type: enum value expected";
             case 0:
             case 1:
-            case 2:
-            case 3:
-            case 100:
-            case 101:
-            case 102:
-            case 104:
-            case 105:
+            case 257:
+            case 258:
+            case 32769:
+            case 32770:
+            case 33025:
+            case 33026:
+            case 33027:
                 break;
             }
         if (message.error != null && message.hasOwnProperty("error")) {
@@ -1967,6 +2187,16 @@ export const Message = $root.Message = (() => {
                     return "cmdStatus." + error;
             }
         }
+        if (message.cmdConnect != null && message.hasOwnProperty("cmdConnect")) {
+            if (properties.payload === 1)
+                return "payload: multiple values";
+            properties.payload = 1;
+            {
+                let error = $root.CmdConnect.verify(message.cmdConnect);
+                if (error)
+                    return "cmdConnect." + error;
+            }
+        }
         return null;
     };
 
@@ -1989,7 +2219,7 @@ export const Message = $root.Message = (() => {
                 break;
             }
             break;
-        case "UNKNOWN":
+        case "UNKOWN":
         case 0:
             message.type = 0;
             break;
@@ -1997,33 +2227,33 @@ export const Message = $root.Message = (() => {
         case 1:
             message.type = 1;
             break;
-        case "SUBSCRIBE":
-        case 2:
-            message.type = 2;
-            break;
-        case "UNSUBSCRIBE":
-        case 3:
-            message.type = 3;
-            break;
-        case "CMD_ATTACH":
-        case 100:
-            message.type = 100;
-            break;
-        case "CMD_INPUT":
-        case 101:
-            message.type = 101;
-            break;
         case "CMD_OUTPUT":
-        case 102:
-            message.type = 102;
-            break;
-        case "CMD_RESIZE":
-        case 104:
-            message.type = 104;
+        case 257:
+            message.type = 257;
             break;
         case "CMD_STATUS":
-        case 105:
-            message.type = 105;
+        case 258:
+            message.type = 258;
+            break;
+        case "SUBSCRIBE":
+        case 32769:
+            message.type = 32769;
+            break;
+        case "UNSUBSCRIBE":
+        case 32770:
+            message.type = 32770;
+            break;
+        case "CMD_INPUT":
+        case 33025:
+            message.type = 33025;
+            break;
+        case "CMD_RESIZE":
+        case 33026:
+            message.type = 33026;
+            break;
+        case "CMD_CONNECT":
+        case 33027:
+            message.type = 33027;
             break;
         }
         if (object.error != null) {
@@ -2061,6 +2291,11 @@ export const Message = $root.Message = (() => {
                 throw TypeError(".Message.cmdStatus: object expected");
             message.cmdStatus = $root.CmdStatus.fromObject(object.cmdStatus);
         }
+        if (object.cmdConnect != null) {
+            if (typeof object.cmdConnect !== "object")
+                throw TypeError(".Message.cmdConnect: object expected");
+            message.cmdConnect = $root.CmdConnect.fromObject(object.cmdConnect);
+        }
         return message;
     };
 
@@ -2078,7 +2313,7 @@ export const Message = $root.Message = (() => {
             options = {};
         let object = {};
         if (options.defaults)
-            object.type = options.enums === String ? "UNKNOWN" : 0;
+            object.type = options.enums === String ? "UNKOWN" : 0;
         if (message.type != null && message.hasOwnProperty("type"))
             object.type = options.enums === String ? $root.MessageType[message.type] === undefined ? message.type : $root.MessageType[message.type] : message.type;
         if (message.error != null && message.hasOwnProperty("error")) {
@@ -2115,6 +2350,11 @@ export const Message = $root.Message = (() => {
             object.cmdStatus = $root.CmdStatus.toObject(message.cmdStatus, options);
             if (options.oneofs)
                 object.payload = "cmdStatus";
+        }
+        if (message.cmdConnect != null && message.hasOwnProperty("cmdConnect")) {
+            object.cmdConnect = $root.CmdConnect.toObject(message.cmdConnect, options);
+            if (options.oneofs)
+                object.payload = "cmdConnect";
         }
         return object;
     };
