@@ -5,7 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout.vue";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { MessageType, Message, CmdConnect, Unsubscribe } from "@/generated/message";
+import { MessageType, Message, CmdConnect, Unsubscribe, CmdInput } from "@/generated/message";
 import Button from "@/components/ui/Button.vue";
 import Badge from "@/components/ui/Badge.vue";
 import {
@@ -25,12 +25,12 @@ import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 import { useApi, ServerState, ApiError } from "@/composables/useApi";
 import { useWebsocket, UseWebsocket } from "@/composables/useWebsocket";
 import { useToast } from "@/composables/useToast";
+import { useClipboard } from '@/composables/useClipboard';
+const { copyText } = useClipboard()
 
 const route = useRoute();
 const api = useApi();
 const toast = useToast();
-
-const serverName = (route.params.name as string) || route.path.split('/')[2];
 
 // data variables
 const terminalContainer = ref(null);
@@ -42,6 +42,10 @@ const autoScroll: Ref<boolean> = ref(true);
 const notFound: Ref<boolean> = ref(false);
 const serverStatus: Ref<string> = ref("unknown");
 const uptime: Ref<number> = ref(0);
+
+const serverName = (route.params.name as string) || route.path.split('/')[2];
+const quickCommands = ["help", "list", "stop", "reload"] as const;
+
 let term!: Terminal;
 let fitAddon!: FitAddon;
 let ws!: UseWebsocket;
@@ -51,6 +55,7 @@ let uptimeTimer!: number;
 // computed
 const isStopped = computed(() => serverState.value?.status === "stopped" || serverState.value?.status === "unknown");
 const isRunning = computed(() => serverState.value && serverState.value.status === "running");
+const cpuCount = computed(() => serverState.value?.cpuLimit);
 
 const statusBadgeVariant = computed(() => {
   if (!serverStatus.value) return "secondary";
@@ -66,6 +71,22 @@ const statusDotClasses = computed(() => {
   if (serverStatus.value === "stopping") return "bg-yellow-500";
   if (serverStatus.value === "stopped") return "bg-red-500";
   return "bg-gray-500"
+});
+
+const cpuPercentage = computed(() => {
+  if (!serverState.value?.cpuUsage) return 0;
+  return Math.round(serverState.value.cpuUsage * 100) / 100;
+});
+
+
+const memoryPercentage = computed(() => {
+  if (!serverState.value?.memoryUsage || !serverState.value?.memoryLimit) return 0;
+  return Math.min(Math.round((serverState.value.memoryUsage / serverState.value.memoryLimit) * 100), 100);
+});
+
+const diskPercentage = computed(() => {
+  if (!serverState.value?.diskUsage || !serverState.value?.diskSize) return 0;
+  return Math.min(Math.round((serverState.value.diskUsage / serverState.value.diskSize) * 100), 100);
 });
 
 // Format helpers
@@ -86,25 +107,10 @@ const formatUptime = (seconds: number | undefined) => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const cpuPercentage = computed(() => {
-  if (!serverState.value?.cpuUsage) return 0;
-  return Math.round(serverState.value.cpuUsage * 100) / 100;
-});
-
-const cpuCount = computed(() => serverState.value?.cpuLimit);
-
-const memoryPercentage = computed(() => {
-  if (!serverState.value?.memoryUsage || !serverState.value?.memoryLimit) return 0;
-  return Math.min(Math.round((serverState.value.memoryUsage / serverState.value.memoryLimit) * 100), 100);
-});
-
-const diskPercentage = computed(() => {
-  if (!serverState.value?.diskUsage || !serverState.value?.diskSize) return 0;
-  return Math.min(Math.round((serverState.value.diskUsage / serverState.value.diskSize) * 100), 100);
-});
-
 const initTerminal = () => {
   if (!terminalContainer.value) return;
+  const encoder = new TextEncoder();
+
   term = new Terminal({
     cursorBlink: true,
     fontSize: 14,
@@ -122,6 +128,21 @@ const initTerminal = () => {
   term.loadAddon(fitAddon);
   term.open(terminalContainer.value);
   fitAddon.fit();
+  term.onData((data) => {
+    sendInput(encoder.encode(data));
+  });
+  term.attachCustomKeyEventHandler((arg) => {
+    if (arg.ctrlKey && arg.code === "KeyC" && arg.type === "keydown") {
+      const selection = term.getSelection();
+      if (selection) {
+        copyText(selection);
+        return false;
+      }
+    } else if (arg.ctrlKey && arg.code === "KeyV" && arg.type === "keydown") {
+      return false;
+    }
+    return true;
+  });
 };
 
 // Action helpers using API
@@ -177,7 +198,15 @@ const sendCommand = async () => {
   }
 };
 
-const quickCommands = ["help", "list", "stop", "reload"] as const;
+const sendInput = (data: Uint8Array<ArrayBuffer>) => {
+  if (!ws.isConnected.value) return;
+  const msg = Message.create({
+    type: MessageType.CMD_INPUT,
+    cmdInput: CmdInput.create({ id: serverName, data })
+  });
+  ws.send(msg);
+}
+
 const applyQuickCommand = (cmd: string) => {
   command.value = cmd;
   // Focus input for immediate editing/sending
