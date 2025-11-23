@@ -32,6 +32,11 @@ const serverRoutes = config.value?.servers.flatMap((server) => {
         title: `${server.name} Console`,
       },
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('../views/Errors/NotFound.vue'),
+    },
   ]
 }) || []
 
