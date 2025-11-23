@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Console - Full Width</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .tab-button {
+      transition: all 0.2s ease;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tab-button.active {
+      background: rgba(99, 102, 241, 0.1);
+      border-bottom-color: #6366f1;
+      color: #6366f1;
+    }
+
+    .tab-button:not(.active):hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .terminal-content {
+      scrollbar-width: thin;
+      scrollbar-color: #334155 #0a0e1a;
+    }
+
+    .terminal-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .terminal-content::-webkit-scrollbar-track {
+      background: #0a0e1a;
+    }
+
+    .terminal-content::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    .terminal-content::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    .progress-bar {
+      background: rgba(148, 163, 184, 0.1);
+    }
+
+    .progress-fill {
+      transition: width 0.5s ease;
+    }
+
+    .status-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+  <!-- Sidebar -->
+  <aside
+    class="fixed top-0 left-0 z-50 w-[290px] h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 px-5 flex flex-col">
+    <!-- Logo -->
+    <div class="py-8 flex">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center">
+          <i class="fas fa-cube text-white text-xl"></i>
+        </div>
+        <span class="text-xl font-bold text-gray-900 dark:text-white">MineViet</span>
+      </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto">
+      <div class="flex flex-col gap-4">
+        <!-- Navigation Group -->
+        <div>
+          <h2 class="mb-4 text-xs uppercase text-gray-400">Navigation</h2>
+          <ul class="flex flex-col gap-2">
+            <li>
+              <a href="/dashboard"
+                class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <i class="fas fa-tachometer-alt w-5"></i>
+                <span>Overview</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Servers Group -->
+        <div>
+          <h2 class="mb-4 text-xs uppercase text-gray-400">Servers</h2>
+          <ul class="flex flex-col gap-2">
+            <li>
+              <a href="/servers/bungee"
+                class="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 transition">
+                <i class="fas fa-server w-5"></i>
+                <span>Bungee</span>
+              </a>
+            </li>
+            <li>
+              <a href="/servers/lobby"
+                class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <i class="fas fa-server w-5"></i>
+                <span>Lobby</span>
+              </a>
+            </li>
+            <li>
+              <a href="/servers/survival"
+                class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <i class="fas fa-server w-5"></i>
+                <span>Survival</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="ml-[290px]">
+    <!-- Top Header -->
+    <header class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <div class="flex items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-4">
+          <button
+            class="flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <i class="fas fa-bars"></i>
+          </button>
+          <span class="text-lg font-semibold text-gray-900 dark:text-white">Minecraft Server Manager</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            class="flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <i class="fas fa-moon"></i>
+          </button>
+          <button
+            class="flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 relative">
+            <i class="fas fa-bell"></i>
+            <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="p-6">
+      <!-- Breadcrumb -->
+      <nav class="mb-6">
+        <ol class="flex items-center gap-2 text-sm">
+          <li class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+            <i class="fas fa-chevron-right text-xs"></i>
+          </li>
+          <li class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+            <span>Servers</span>
+            <i class="fas fa-chevron-right text-xs"></i>
+          </li>
+          <li class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+            <span>Bungee</span>
+            <i class="fas fa-chevron-right text-xs"></i>
+          </li>
+          <li class="text-gray-900 dark:text-white">Server Console</li>
+        </ol>
+      </nav>
+
+      <!-- Control Bar Card -->
+      <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6 mb-6">
+        <div class="flex items-center justify-between">
+          <!-- Left: Server Info -->
+          <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+              <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Bungee</h1>
+              <span
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm font-medium">
+                <span class="w-2 h-2 rounded-full bg-green-500 status-pulse"></span>
+                Running
+              </span>
+            </div>
+            <div class="h-8 w-px bg-gray-200 dark:bg-gray-800"></div>
+            <div class="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-users text-indigo-500"></i>
+                <span>Online: <strong class="text-gray-900 dark:text-white">24 / 100</strong></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fas fa-clock text-purple-500"></i>
+                <span>Uptime: <strong class="text-gray-900 dark:text-white">15h 32m</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Action Buttons -->
+          <div class="flex gap-3">
+            <button
+              class="px-4 py-2 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20 border border-green-500/20 transition text-sm font-medium">
+              <i class="fas fa-play mr-2"></i>Start
+            </button>
+            <button
+              class="px-4 py-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition text-sm font-medium">
+              <i class="fas fa-redo mr-2"></i>Restart
+            </button>
+            <button
+              class="px-4 py-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 transition text-sm font-medium">
+              <i class="fas fa-stop mr-2"></i>Stop
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-6 gap-6 mb-6">
+        <!-- CPU -->
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 hover:border-indigo-500/30 transition">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <i class="fas fa-microchip text-blue-500 text-lg"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">CPU</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">24.5%</p>
+            </div>
+          </div>
+          <div class="progress-bar rounded-full h-1.5">
+            <div class="progress-fill h-full rounded-full bg-blue-500" style="width: 24.5%"></div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">4 Cores</p>
+        </div>
+
+        <!-- Memory -->
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 hover:border-purple-500/30 transition">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <i class="fas fa-memory text-purple-500 text-lg"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Memory</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">1.8 GB</p>
+            </div>
+          </div>
+          <div class="progress-bar rounded-full h-1.5">
+            <div class="progress-fill h-full rounded-full bg-purple-500" style="width: 45%"></div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">of 4 GB</p>
+        </div>
+
+        <!-- Disk -->
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 hover:border-orange-500/30 transition">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+              <i class="fas fa-hdd text-orange-500 text-lg"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Disk</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">36 GB</p>
+            </div>
+          </div>
+          <div class="progress-bar rounded-full h-1.5">
+            <div class="progress-fill h-full rounded-full bg-orange-500" style="width: 64%"></div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">of 57 GB</p>
+        </div>
+
+        <!-- Network -->
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 hover:border-emerald-500/30 transition">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <i class="fas fa-network-wired text-emerald-500 text-lg"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Network</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">128 KB/s</p>
+            </div>
+          </div>
+          <div class="progress-bar rounded-full h-1.5">
+            <div class="progress-fill h-full rounded-full bg-emerald-500" style="width: 15%"></div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">↑45 ↓83</p>
+        </div>
+
+        <!-- Uptime -->
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 hover:border-cyan-500/30 transition">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+              <i class="fas fa-clock text-cyan-500 text-lg"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Uptime</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">15h 32m</p>
+            </div>
+          </div>
+          <div class="progress-bar rounded-full h-1.5">
+            <div class="progress-fill h-full rounded-full bg-cyan-500" style="width: 65%"></div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Since restart</p>
+        </div>
+
+        <!-- Players -->
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 hover:border-pink-500/30 transition">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center">
+              <i class="fas fa-users text-pink-500 text-lg"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Players</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">24</p>
+            </div>
+          </div>
+          <div class="progress-bar rounded-full h-1.5">
+            <div class="progress-fill h-full rounded-full bg-pink-500" style="width: 24%"></div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">of 100 slots</p>
+        </div>
+      </div>
+
+      <!-- Console Card -->
+      <div
+        class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
+        <!-- Tab Navigation -->
+        <div class="border-b border-gray-200 dark:border-gray-800">
+          <div class="grid grid-cols-6">
+            <button class="tab-button active py-4 px-6 flex items-center justify-center gap-3 font-medium text-sm">
+              <i class="fas fa-terminal"></i>
+              <span>Console</span>
+            </button>
+            <button
+              class="tab-button py-4 px-6 flex items-center justify-center gap-3 font-medium text-sm text-gray-500 dark:text-gray-400">
+              <i class="fas fa-code"></i>
+              <span>Code Editor</span>
+            </button>
+            <button
+              class="tab-button py-4 px-6 flex items-center justify-center gap-3 font-medium text-sm text-gray-500 dark:text-gray-400">
+              <i class="fas fa-folder"></i>
+              <span>File Manager</span>
+            </button>
+            <button
+              class="tab-button py-4 px-6 flex items-center justify-center gap-3 font-medium text-sm text-gray-500 dark:text-gray-400">
+              <i class="fas fa-puzzle-piece"></i>
+              <span>Plugins</span>
+            </button>
+            <button
+              class="tab-button py-4 px-6 flex items-center justify-center gap-3 font-medium text-sm text-gray-500 dark:text-gray-400">
+              <i class="fas fa-archive"></i>
+              <span>Backups</span>
+            </button>
+            <button
+              class="tab-button py-4 px-6 flex items-center justify-center gap-3 font-medium text-sm text-gray-500 dark:text-gray-400">
+              <i class="fas fa-cog"></i>
+              <span>Settings</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="p-6">
+          <!-- Terminal -->
+          <div
+            class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+            <!-- Terminal Header -->
+            <div
+              class="px-5 py-3 bg-white dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="flex gap-1.5">
+                  <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300 ml-2">Server Console</span>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  class="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition">
+                  <i class="fas fa-search mr-1.5"></i>Search
+                </button>
+                <button
+                  class="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition">
+                  <i class="fas fa-download mr-1.5"></i>Export
+                </button>
+                <button
+                  class="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition">
+                  <i class="fas fa-trash mr-1.5"></i>Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Terminal Content -->
+            <div
+              class="terminal-content p-5 h-[calc(100vh-600px)] min-h-[400px] overflow-y-auto font-mono text-sm leading-relaxed bg-gray-900">
+              <div class="text-green-400">[15:32:18 INFO]: Starting BungeeCord version
+                git:BungeeCord-Bootstrap:1.19-R0.1-SNAPSHOT</div>
+              <div class="text-gray-400">[15:32:18 INFO]: Using standard Java JCE cipher</div>
+              <div class="text-gray-400">[15:32:18 INFO]: Using standard Java compressor</div>
+              <div class="text-blue-400">[15:32:19 INFO]: Discovered module: ModuleSpec(name=cmd_alert)</div>
+              <div class="text-blue-400">[15:32:19 INFO]: Discovered module: ModuleSpec(name=cmd_find)</div>
+              <div class="text-blue-400">[15:32:19 INFO]: Discovered module: ModuleSpec(name=cmd_list)</div>
+              <div class="text-cyan-400">[15:32:20 INFO]: Loaded plugin reconnect_yaml version git:reconnect_yaml:1.19
+              </div>
+              <div class="text-cyan-400">[15:32:20 INFO]: Loaded plugin cmd_find version git:cmd_find:1.19</div>
+              <div class="text-cyan-400">[15:32:20 INFO]: Loaded plugin cmd_alert version git:cmd_alert:1.19</div>
+              <div class="text-green-400 font-bold">[15:32:21 INFO]: Listening on /0.0.0.0:25577</div>
+              <div class="text-purple-400">[15:35:42 INFO]: [/127.0.0.1:54321] <-> InitialHandler has connected</div>
+              <div class="text-yellow-400">[15:35:43 WARN]: Took 245ms to process login for Player123</div>
+              <div class="text-green-400">[15:35:43 INFO]: [Player123] -> UpstreamBridge has connected</div>
+              <div class="text-gray-400">[15:36:15 INFO]: [Player123] -> ServerConnection [lobby] has connected</div>
+              <div class="flex items-center mt-2">
+                <span class="text-green-400 mr-2">></span>
+                <span class="animate-pulse">_</span>
+              </div>
+            </div>
+
+            <!-- Command Input -->
+            <div class="p-4 bg-white dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800">
+              <div class="flex gap-3 mb-3">
+                <input type="text" placeholder="Type a command..."
+                  class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500">
+                <button
+                  class="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition">
+                  <i class="fas fa-paper-plane mr-2"></i>Send
+                </button>
+              </div>
+              <div class="flex items-center gap-3 text-xs">
+                <span class="text-gray-500 dark:text-gray-400">Quick:</span>
+                <button
+                  class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition">help</button>
+                <button
+                  class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition">list</button>
+                <button
+                  class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition">stop</button>
+                <button
+                  class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition">reload</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        tabButtons.forEach(btn => {
+          btn.classList.remove('active');
+          btn.classList.add('text-gray-500', 'dark:text-gray-400');
+        });
+        button.classList.add('active');
+        button.classList.remove('text-gray-500', 'dark:text-gray-400');
+      });
+    });
+
+    // Animate progress bars
+    window.addEventListener('load', () => {
+      const progressBars = document.querySelectorAll('.progress-fill');
+      progressBars.forEach(bar => {
+        const targetWidth = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+          bar.style.width = targetWidth;
+        }, 200);
+      });
+    });
+  </script>
+</body>
+
+</html>
