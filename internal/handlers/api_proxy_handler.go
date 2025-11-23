@@ -22,6 +22,11 @@ func MCRunnerProxyHandler(apiURLs map[string]string) fiber.Handler {
 			fmt.Println(err)
 			return ctx.SendStatus(fiber.StatusInternalServerError)
 		}
+		// Append query parameters from the original request
+		if queryString := string(ctx.Request().URI().QueryString()); queryString != "" {
+			fullURL = fullURL + "?" + queryString
+		}
+		fmt.Println(fullURL)
 		return proxy.Do(ctx, fullURL)
 	}
 }
