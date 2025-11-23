@@ -8,18 +8,17 @@ import 'flatpickr/dist/flatpickr.css'
 
 import { createApp } from 'vue'
 import App from './App.vue'
-import router from './router'
 import VueApexCharts from 'vue3-apexcharts'
-import { loadConfig } from '@/composables/useConfig'
 import { initWebsocket } from '@/composables/useWebsocket'
 import InternalServerError from '@/views/Errors/InternalServer.vue'
 
 async function initializeApp() {
-  let config
+  let router;
   try {
-    config = await loadConfig()
+    const routerModule = await import('./router');
+    router = routerModule.default;
   } catch (err) {
-    console.error('Failed to load config:', err)
+    console.error('Failed to load config or router:', err)
     const errorApp = createApp(InternalServerError, {
       errorMessage: `Failed to load application configuration: ${err instanceof Error ? err.message : 'Unknown error'}`
     })

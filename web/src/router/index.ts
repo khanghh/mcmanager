@@ -1,4 +1,39 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useConfig, loadConfig } from '@/composables/useConfig'
+
+
+await loadConfig()
+const config = useConfig()
+
+const serverRoutes = config.value?.servers.flatMap((server) => {
+  const name = server.name.toLowerCase()
+  return [
+    {
+      path: `/servers/${name}/overview`,
+      name: `${server.name}Overview`,
+      component: () => import('../views/server/Overview.vue'),
+      meta: {
+        title: `${server.name} Overview`,
+      },
+    },
+    {
+      path: `/servers/${name}/editor`,
+      name: `${server.name}Editor`,
+      component: () => import('../views/server/CodeEditor.vue'),
+      meta: {
+        title: `${server.name} Editor`,
+      },
+    },
+    {
+      path: `/servers/${name}/console`,
+      name: `${server.name}Console`,
+      component: () => import('../views/server/Console.vue'),
+      meta: {
+        title: `${server.name} Console`,
+      },
+    },
+  ]
+}) || []
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,6 +46,14 @@ const router = createRouter({
       redirect: '/dashboard',
     },
     {
+      path: '/test',
+      name: 'Test',
+      component: () => import('../views/UiElements/Badges.vue'),
+      meta: {
+        title: 'Test',
+      },
+    },
+    {
       path: '/dashboard',
       name: 'Dashboard',
       component: () => import('../views/Ecommerce.vue'),
@@ -18,43 +61,7 @@ const router = createRouter({
         title: 'eCommerce Dashboard',
       },
     },
-    {
-      path: '/servers/:name',
-      name: 'Server',
-      redirect: (to) => `/servers/${to.params.name}/overview`,
-    },
-    {
-      path: '/servers/:name/overview',
-      name: 'Overview',
-      component: () => import('../views/server/Overview.vue'),
-      meta: {
-        title: 'Server Overview',
-      },
-    },
-    {
-      path: '/servers/:name/edit',
-      name: 'CodeEditor',
-      component: () => import('../views/server/CodeEditor.vue'),
-      meta: {
-        title: 'Server Editor',
-      },
-    },
-    {
-      path: '/servers/:name/console',
-      name: 'Console',
-      component: () => import('../views/server/Console.vue'),
-      meta: {
-        title: 'Server Console',
-      },
-    },
-    {
-      path: '/servers/:name/players',
-      name: 'PlayerList',
-      component: () => import('../views/server/PlayerList.vue'),
-      meta: {
-        title: 'Server Players',
-      },
-    },
+    ...serverRoutes,
   ],
 })
 
