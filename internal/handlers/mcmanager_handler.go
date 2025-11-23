@@ -26,11 +26,15 @@ func (h *MCManagerHandler) OnWSClientDisconnect(cl *websocket.Client) error {
 func (h *MCManagerHandler) HandleCmdInput(cl *websocket.Client, msg *gen.Message) error {
 	cmdInput := msg.GetCmdInput()
 	runnerID := cmdInput.GetId()
+	data := cmdInput.GetData()
+	if len(data) == 0 {
+		return nil
+	}
 	runner, err := h.managerSvc.GetRunner(runnerID)
 	if err != nil {
 		return cl.SendMessage(NewServerNotExistsError(runnerID))
 	}
-	if err := runner.WriteConsole(cmdInput.Data); err != nil {
+	if err := runner.WriteConsole(data); err != nil {
 		return cl.SendMessage(mapRunnerErrorMessage(runnerID, err))
 	}
 	return nil
@@ -40,6 +44,9 @@ func (h *MCManagerHandler) HandleCmdResize(cl *websocket.Client, msg *gen.Messag
 	cmdResize := msg.GetCmdResize()
 	rows, cols := int(cmdResize.Rows), int(cmdResize.Cols)
 	runnerID := cmdResize.GetId()
+	if rows <= 24 || cols <= 80 {
+		return nil
+	}
 	runner, err := h.managerSvc.GetRunner(runnerID)
 	if err != nil {
 		return cl.SendMessage(NewServerNotExistsError(runnerID))
