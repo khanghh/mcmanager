@@ -1,65 +1,62 @@
 <template>
-  <span :class="[baseStyles, sizeClass, colorStyles]">
-    <span v-if="startIcon" class="mr-1">
-      <component :is="startIcon" />
-    </span>
+  <span :class="[baseStyles, colorStyles, roundedClass]">
     <slot></slot>
-    <span v-if="endIcon" class="ml-1">
-      <component :is="endIcon" />
-    </span>
   </span>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from "vue"
 
-type BadgeVariant = 'light' | 'solid'
-type BadgeSize = 'sm' | 'md'
-type BadgeColor = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark'
+type BadgeVariant = "primary" | "secondary" | "success" | "warning" | "danger"
 
 interface BadgeProps {
   variant?: BadgeVariant
-  size?: BadgeSize
-  color?: BadgeColor
-  startIcon?: object
-  endIcon?: object
+  solid?: boolean
+  soft?: boolean
+  outline?: boolean
+  rounded?: boolean
 }
 
 const props = withDefaults(defineProps<BadgeProps>(), {
-  variant: 'light',
-  color: 'primary',
-  size: 'md',
+  variant: "primary",
+  solid: false,
+  soft: false,
+  outline: false,
+  rounded: false,
 })
 
-const baseStyles =
-  'inline-flex items-center px-2.5 py-0.5 justify-center gap-1 rounded-full font-medium capitalize'
+const baseStyles = "inline-flex items-center justify-center gap-1 font-medium leading-none px-2 py-1"
 
-const sizeStyles = {
-  sm: 'text-theme-xs',
-  md: 'text-sm',
-}
-
-const variants = {
-  light: {
-    primary: 'bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400',
-    success: 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
-    error: 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
-    warning: 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400',
-    info: 'bg-blue-light-50 text-blue-light-500 dark:bg-blue-light-500/15 dark:text-blue-light-500',
-    light: 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-white/80',
-    dark: 'bg-gray-500 text-white dark:bg-white/5 dark:text-white',
-  },
+const variantStyles = {
   solid: {
-    primary: 'bg-brand-500 text-white dark:text-white',
-    success: 'bg-success-500 text-white dark:text-white',
-    error: 'bg-error-500 text-white dark:text-white',
-    warning: 'bg-warning-500 text-white dark:text-white',
-    info: 'bg-blue-light-500 text-white dark:text-white',
-    light: 'bg-gray-400 dark:bg-white/5 text-white dark:text-white/80',
-    dark: 'bg-gray-700 text-white dark:text-white',
+    primary: "bg-blue-500 text-white dark:bg-blue-600",
+    secondary: "bg-gray-500 text-white dark:bg-gray-600",
+    success: "bg-green-500 text-white dark:bg-green-600",
+    warning: "bg-yellow-500 text-white dark:bg-yellow-600",
+    danger: "bg-red-500 text-white dark:bg-red-600",
   },
+  outline: {
+    primary: "border border-blue-500 text-blue-500 dark:text-blue-400 dark:border-blue-400",
+    secondary: "border border-gray-500 text-gray-500 dark:text-gray-400 dark:border-gray-400",
+    success: "border border-green-500 text-green-500 dark:text-green-400 dark:border-green-400",
+    warning: "border border-yellow-500 text-yellow-500 dark:text-yellow-400 dark:border-yellow-400",
+    danger: "border border-red-500 text-red-500 dark:text-red-400 dark:border-red-400",
+  },
+  soft: {
+    primary: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300",
+    secondary: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+    success: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300",
+    warning: "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300",
+    danger: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300",
+  }
 }
 
-const sizeClass = computed(() => sizeStyles[props.size])
-const colorStyles = computed(() => variants[props.variant][props.color])
+const colorStyles = computed(() => {
+  if (props.solid) return variantStyles.solid[props.variant]
+  if (props.outline) return variantStyles.outline[props.variant]
+  // default to soft
+  return variantStyles.soft[props.variant]
+})
+
+const roundedClass = computed(() => props.rounded ? "rounded-full" : "rounded-md")
 </script>
