@@ -112,7 +112,7 @@ func mustInitMCManagerService(servers []config.ServerConfig) *manager.MCManagerS
 		if err != nil {
 			log.Fatalf("could not initialize MCRunner %q: %v", sv.Name, err)
 		}
-		runners[sv.Name] = runner
+		runners[strings.ToLower(sv.Name)] = runner
 	}
 	return manager.NewMCManagerService(runners)
 }
