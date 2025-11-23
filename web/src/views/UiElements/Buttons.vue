@@ -1,6 +1,6 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle" />
+    <PageBreadcrumb :path="[currentPageTitle]" />
     <div class="space-y-5 sm:space-y-6">
       <ComponentCard title="Primary Button">
         <div class="flex items-center gap-5">

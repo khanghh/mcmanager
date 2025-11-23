@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios'
 
 export type ApiError = {
-  status: number
+  code: number
   message: string
 }
 
@@ -9,7 +9,7 @@ export type ApiEnvelope<T> = {
   apiVersion?: string
   data?: T
   error?: {
-    code?: string
+    code?: number
     message?: string
   }
 }
@@ -46,11 +46,11 @@ function unwrapApiResponse<T>(resData: ApiEnvelope<T>): T {
 function toApiError(err: unknown): ApiError {
   if (axios.isAxiosError(err)) {
     const e = err as AxiosError<ApiEnvelope<unknown>>
-    const status = e.response?.status ?? 0
+    const code = e.response?.data?.error?.code ?? 0
     const msg = e.response?.data?.error?.message || e.message || 'Request failed'
-    return { status, message: msg }
+    return { code, message: msg }
   }
-  return { status: 0, message: (err as Error)?.message || 'Unknown error' }
+  return { code: 0, message: (err as Error)?.message || 'Unknown error' }
 }
 
 export function useApi() {

@@ -1,6 +1,6 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle" />
+    <PageBreadcrumb :path="[currentPageTitle]" />
     <div className="space-y-5 sm:space-y-6">
       <ComponentCard title="Default Avatar">
         <div className="flex flex-col items-center justify-center gap-5 sm:flex-row">

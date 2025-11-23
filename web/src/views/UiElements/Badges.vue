@@ -1,6 +1,6 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle" />
+    <PageBreadcrumb :path="[currentPageTitle]" />
     <div class="space-y-5 sm:space-y-6">
       <ComponentCard title="With Soft Background">
         <div class="flex flex-wrap gap-4 sm:items-center sm:justify-center">

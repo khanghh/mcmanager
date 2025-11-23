@@ -1,6 +1,6 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle" />
+    <PageBreadcrumb :path="[currentPageTitle]" />
     <div class="space-y-5 sm:space-y-6">
       <ComponentCard title="Line Chart 1">
         <LineChartOne />

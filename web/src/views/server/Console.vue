@@ -1,6 +1,268 @@
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount, computed, type Ref } from "vue";
+import { useRoute } from "vue-router";
+import AdminLayout from "@/components/layout/AdminLayout.vue";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import "@xterm/xterm/css/xterm.css";
+import { MessageType, Message, CmdConnect, Unsubscribe } from "@/generated/message";
+import Button from "@/components/ui/Button.vue";
+import Badge from "@/components/ui/Badge.vue";
+import {
+  PhHardDriveIcon,
+  PhPlayIcon,
+  PhStopIcon,
+  PhXIcon,
+  PhCpuIcon,
+  PhMemoryIcon,
+  PhArrowClockwiseIcon,
+  PhTrashIcon,
+  PhPaperPlaneRightIcon,
+  PhUsersThreeIcon,
+  PhClockIcon,
+} from "@/icons";
+import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
+import { useApi, ServerState, ApiError } from "@/composables/useApi";
+import { useWebsocket, UseWebsocket } from "@/composables/useWebsocket";
+import { useToast } from "@/composables/useToast";
+
+const route = useRoute();
+const api = useApi();
+const toast = useToast();
+
+const serverName = (route.params.name as string) || route.path.split('/')[2];
+
+// data variables
+const terminalContainer = ref(null);
+const serverState: Ref<ServerState | null> = ref(null);
+const command: Ref<string> = ref("");
+const commandInput: Ref<HTMLInputElement | null> = ref(null);
+const connected: Ref<boolean> = ref(false);
+const autoScroll: Ref<boolean> = ref(true);
+const notFound: Ref<boolean> = ref(false);
+const serverStatus: Ref<string> = ref("unknown");
+const uptime: Ref<number> = ref(0);
+let term!: Terminal;
+let fitAddon!: FitAddon;
+let ws!: UseWebsocket;
+let fetchStateTimer!: number;
+let uptimeTimer!: number;
+
+// computed
+const isStopped = computed(() => serverState.value?.status === "stopped" || serverState.value?.status === "unknown");
+const isRunning = computed(() => serverState.value && serverState.value.status === "running");
+
+const statusBadgeVariant = computed(() => {
+  if (!serverStatus.value) return "secondary";
+  if (serverStatus.value === "running") return "success";
+  if (serverStatus.value === "stopping") return "warning";
+  if (serverStatus.value === "stopped") return "danger";
+  return "secondary"
+});
+
+const statusDotClasses = computed(() => {
+  if (!serverStatus.value) return "bg-gray-500";
+  if (serverStatus.value === "running") return "bg-green-500";
+  if (serverStatus.value === "stopping") return "bg-yellow-500";
+  if (serverStatus.value === "stopped") return "bg-red-500";
+  return "bg-gray-500"
+});
+
+// Format helpers
+const formatBytes = (bytes: number | undefined) => {
+  if (bytes === undefined) return '0 B';
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const formatUptime = (seconds: number | undefined) => {
+  if (!seconds) return '00:00:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+const cpuPercentage = computed(() => {
+  if (!serverState.value?.cpuUsage) return 0;
+  return Math.round(serverState.value.cpuUsage * 100) / 100;
+});
+
+const cpuCount = computed(() => serverState.value?.cpuLimit);
+
+const memoryPercentage = computed(() => {
+  if (!serverState.value?.memoryUsage || !serverState.value?.memoryLimit) return 0;
+  return Math.min(Math.round((serverState.value.memoryUsage / serverState.value.memoryLimit) * 100), 100);
+});
+
+const diskPercentage = computed(() => {
+  if (!serverState.value?.diskUsage || !serverState.value?.diskSize) return 0;
+  return Math.min(Math.round((serverState.value.diskUsage / serverState.value.diskSize) * 100), 100);
+});
+
+const initTerminal = () => {
+  if (!terminalContainer.value) return;
+  term = new Terminal({
+    cursorBlink: true,
+    fontSize: 14,
+    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    theme: {
+      background: "#09090b",
+      foreground: "#f4f4f5",
+      cursor: "#f4f4f5",
+      selectionBackground: "#3f3f46",
+    },
+    scrollback: 100,
+  });
+
+  fitAddon = new FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(terminalContainer.value);
+  fitAddon.fit();
+};
+
+// Action helpers using API
+const startServer = async () => {
+  try {
+    await api.startServer(serverName);
+    toast.info(`${serverName} has been started`);
+  } catch (e) {
+    toast.error(`${serverName} failed to start: ${e}`);
+  }
+};
+
+const stopServer = async () => {
+  try {
+    serverStatus.value = "stopping";
+    await api.stopServer(serverName);
+    toast.info(`${serverName} has been stopped`);
+  } catch (err: ApiError | unknown) {
+    toast.error(`Failed to stop server ${serverName}: ${(err as ApiError)?.message || err}`)
+  }
+};
+
+const restartServer = async () => {
+  try {
+    await api.restartServer(serverName);
+    toast.info(`${serverName} has been restarted`);
+  } catch (err: ApiError | unknown) {
+    toast.error(`Failed to restart server ${serverName}: ${(err as ApiError)?.message || err}`)
+  }
+};
+
+const killServer = async () => {
+  try {
+    await api.killServer(serverName);
+    toast.info(`${serverName} has been stopped`);
+  } catch (err: ApiError | unknown) {
+    toast.error(`Failed to kill server ${serverName}: ${(err as ApiError)?.message || err}`)
+  }
+};
+
+const clearConsole = () => {
+  term.clear();
+  fitAddon.fit();
+};
+
+const sendCommand = async () => {
+  if (!command.value.trim() || notFound.value) return;
+  try {
+    await api.sendCommand(serverName, command.value.trim());
+    command.value = '';
+  } catch (e) {
+    toast.error(`${serverName} failed to send command: ${e}`);
+  }
+};
+
+const quickCommands = ["help", "list", "stop", "reload"] as const;
+const applyQuickCommand = (cmd: string) => {
+  command.value = cmd;
+  // Focus input for immediate editing/sending
+  try { commandInput.value?.focus(); } catch (_) { /* noop */ }
+};
+
+const fetchServerState = async () => {
+  try {
+    serverState.value = await api.getServerState(serverName);
+    notFound.value = false;
+    serverStatus.value = serverState.value.status;
+    if (serverState.value.uptimeSec !== undefined) {
+      uptime.value = serverState.value.uptimeSec;
+    }
+  } catch {
+    notFound.value = true;
+    serverStatus.value = "unknown"
+  }
+}
+
+onMounted(async () => {
+  // Load server state first; if not found show 404 and bail out
+  await fetchServerState();
+  if (notFound.value) return;
+
+  initTerminal();
+  window.addEventListener("resize", () => {
+    fitAddon.fit();
+  });
+
+  // connection events
+  ws = useWebsocket();
+  ws.onopen(() => {
+    connected.value = true;
+    ws.send(Message.create({
+      type: MessageType.CMD_CONNECT,
+      cmdConnect: CmdConnect.create({ id: serverName })
+    }))
+  });
+  ws.onclose(() => { connected.value = false; });
+
+  ws.onmessage((msg) => {
+    if (msg.type === MessageType.ERROR) {
+
+    } else if (msg.type === MessageType.CMD_OUTPUT) {
+      if (msg.cmdOutput && term) {
+        const text = new TextDecoder().decode(msg.cmdOutput.data);
+        term.write(text);
+        if (autoScroll.value) {
+          try { term?.scrollToBottom?.(); } catch (_) { }
+        }
+      }
+    } else if (msg.type === MessageType.CMD_STATUS) {
+      serverStatus.value = msg.cmdStatus.status;
+      fetchServerState();
+    }
+  });
+
+  fetchStateTimer = window.setInterval(fetchServerState, 10000);
+  uptimeTimer = window.setInterval(() => {
+    if (isRunning.value) {
+      uptime.value++;
+    }
+  }, 1000);
+});
+
+onBeforeUnmount(() => {
+  if (fetchStateTimer) clearInterval(fetchStateTimer);
+  if (uptimeTimer) clearInterval(uptimeTimer);
+  if (notFound.value) return;
+  window.removeEventListener("resize", () => {
+    fitAddon.fit();
+  });
+  ws.send(Message.create({
+    type: MessageType.UNSUBSCRIBE,
+    unsubscribe: Unsubscribe.create({ topic: `servers:${serverName}` })
+  }));
+  term.dispose();
+});
+
+const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"]);
+</script>
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle" />
+    <PageBreadcrumb :path="breadcrumbPath" />
     <div
       class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
       <div class="mb-6 flex items-center justify-between">
@@ -172,266 +434,3 @@
     </div>
   </AdminLayout>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, type Ref } from "vue";
-import { useRoute } from "vue-router";
-import AdminLayout from "@/components/layout/AdminLayout.vue";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import "@xterm/xterm/css/xterm.css";
-import { MessageType, Message, CmdConnect, Unsubscribe } from "@/generated/message";
-import Button from "@/components/ui/Button.vue";
-import Badge from "@/components/ui/Badge.vue";
-import {
-  PhHardDriveIcon,
-  PhPlayIcon,
-  PhStopIcon,
-  PhXIcon,
-  PhCpuIcon,
-  PhMemoryIcon,
-  PhArrowClockwiseIcon,
-  PhTrashIcon,
-  PhPaperPlaneRightIcon,
-  PhUsersThreeIcon,
-  PhClockIcon,
-} from "@/icons";
-import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
-import { useApi, ServerState } from "@/composables/useApi";
-import { useWebsocket, UseWebsocket } from "@/composables/useWebsocket";
-import { useToast } from "@/composables/useToast";
-
-const route = useRoute();
-const api = useApi();
-const toast = useToast();
-
-const serverName = (route.params.name as string) || route.path.split('/')[2];
-
-// data variables
-const terminalContainer = ref(null);
-const serverState: Ref<ServerState | null> = ref(null);
-const command: Ref<string> = ref("");
-const commandInput: Ref<HTMLInputElement | null> = ref(null);
-const connected: Ref<boolean> = ref(false);
-const autoScroll: Ref<boolean> = ref(true);
-const notFound: Ref<boolean> = ref(false);
-const serverStatus: Ref<string> = ref("unknown");
-const uptime: Ref<number> = ref(0);
-let term!: Terminal;
-let fitAddon!: FitAddon;
-let ws!: UseWebsocket;
-let fetchStateTimer!: number;
-let uptimeTimer!: number;
-
-// computed
-const isStopped = computed(() => serverState.value?.status === "stopped" || serverState.value?.status === "unknown");
-const isRunning = computed(() => serverState.value && serverState.value.status === "running");
-
-const statusBadgeVariant = computed(() => {
-  if (!serverStatus.value) return "secondary";
-  if (serverStatus.value === "running") return "success";
-  if (serverStatus.value === "stopping") return "warning";
-  if (serverStatus.value === "stopped") return "danger";
-  return "secondary"
-});
-
-const statusDotClasses = computed(() => {
-  if (!serverStatus.value) return "bg-gray-500";
-  if (serverStatus.value === "running") return "bg-green-500";
-  if (serverStatus.value === "stopping") return "bg-yellow-500";
-  if (serverStatus.value === "stopped") return "bg-red-500";
-  return "bg-gray-500"
-});
-
-// Format helpers
-const formatBytes = (bytes: number | undefined) => {
-  if (bytes === undefined) return '0 B';
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-const formatUptime = (seconds: number | undefined) => {
-  if (!seconds) return '00:00:00';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
-const cpuPercentage = computed(() => {
-  if (!serverState.value?.cpuUsage) return 0;
-  return Math.round(serverState.value.cpuUsage * 100) / 100;
-});
-
-const cpuCount = computed(() => serverState.value?.cpuLimit);
-
-const memoryPercentage = computed(() => {
-  if (!serverState.value?.memoryUsage || !serverState.value?.memoryLimit) return 0;
-  return Math.min(Math.round((serverState.value.memoryUsage / serverState.value.memoryLimit) * 100), 100);
-});
-
-const diskPercentage = computed(() => {
-  if (!serverState.value?.diskUsage || !serverState.value?.diskSize) return 0;
-  return Math.min(Math.round((serverState.value.diskUsage / serverState.value.diskSize) * 100), 100);
-});
-
-const initTerminal = () => {
-  if (!terminalContainer.value) return;
-  term = new Terminal({
-    cursorBlink: true,
-    fontSize: 14,
-    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-    theme: {
-      background: "#09090b",
-      foreground: "#f4f4f5",
-      cursor: "#f4f4f5",
-      selectionBackground: "#3f3f46",
-    },
-    scrollback: 100,
-  });
-
-  fitAddon = new FitAddon();
-  term.loadAddon(fitAddon);
-  term.open(terminalContainer.value);
-  fitAddon.fit();
-};
-
-// Action helpers using API
-const startServer = async () => {
-  try {
-    await api.startServer(serverName);
-    toast.info(`Start server ${serverName} is now running`);
-  } catch (e) {
-    toast.error(`${serverName} failed to start: ${e}`);
-  }
-};
-
-const stopServer = async () => {
-  try {
-    serverStatus.value = "stopping";
-    await api.stopServer(serverName);
-    toast.info(`${serverName} has been stopped`);
-  } catch (e) {
-    toast.error(`${serverName} failed to stop: ${e}`);
-  }
-};
-
-const restartServer = async () => {
-  try {
-    await api.restartServer(serverName);
-    toast.info(`${serverName} is restarted`);
-  } catch (e) {
-    toast.error(`${serverName} failed to restart: ${e}`);
-  }
-};
-
-const killServer = async () => {
-  try {
-    await api.killServer(serverName);
-    toast.info(`${serverName} has been stopped`);
-  } catch (e) {
-    toast.error(`${serverName} failed to stop: ${e}`);
-  }
-};
-
-const clearConsole = () => {
-  term.clear();
-  fitAddon.fit();
-};
-
-const sendCommand = async () => {
-  if (!command.value.trim() || notFound.value) return;
-  try {
-    await api.sendCommand(serverName, command.value.trim());
-    command.value = '';
-  } catch (e) {
-    toast.error(`${serverName} failed to send command: ${e}`);
-  }
-};
-
-const quickCommands = ["help", "list", "stop", "reload"] as const;
-const applyQuickCommand = (cmd: string) => {
-  command.value = cmd;
-  // Focus input for immediate editing/sending
-  try { commandInput.value?.focus(); } catch (_) { /* noop */ }
-};
-
-const fetchServerState = async () => {
-  try {
-    serverState.value = await api.getServerState(serverName);
-    notFound.value = false;
-    serverStatus.value = serverState.value.status;
-    if (serverState.value.uptimeSec !== undefined) {
-      uptime.value = serverState.value.uptimeSec;
-    }
-  } catch {
-    notFound.value = true;
-    serverStatus.value = "unknown"
-  }
-}
-
-onMounted(async () => {
-  // Load server state first; if not found show 404 and bail out
-  await fetchServerState();
-  if (notFound.value) return;
-
-  initTerminal();
-  window.addEventListener("resize", () => {
-    fitAddon.fit();
-  });
-
-  // connection events
-  ws = useWebsocket();
-  ws.onopen(() => {
-    connected.value = true;
-    ws.send(Message.create({
-      type: MessageType.CMD_CONNECT,
-      cmdConnect: CmdConnect.create({ id: serverName })
-    }))
-  });
-  ws.onclose(() => { connected.value = false; });
-
-  ws.onmessage((msg) => {
-    if (msg.type === MessageType.ERROR) {
-
-    } else if (msg.type === MessageType.CMD_OUTPUT) {
-      if (msg.cmdOutput && term) {
-        const text = new TextDecoder().decode(msg.cmdOutput.data);
-        term.write(text);
-        if (autoScroll.value) {
-          try { term?.scrollToBottom?.(); } catch (_) { }
-        }
-      }
-    } else if (msg.type === MessageType.CMD_STATUS) {
-      serverStatus.value = msg.cmdStatus.status;
-      fetchServerState();
-    }
-  });
-
-  fetchStateTimer = window.setInterval(fetchServerState, 10000);
-  uptimeTimer = window.setInterval(() => {
-    if (isRunning.value) {
-      uptime.value++;
-    }
-  }, 1000);
-});
-
-onBeforeUnmount(() => {
-  if (fetchStateTimer) clearInterval(fetchStateTimer);
-  if (uptimeTimer) clearInterval(uptimeTimer);
-  if (notFound.value) return;
-  window.removeEventListener("resize", () => {
-    fitAddon.fit();
-  });
-  ws.send(Message.create({
-    type: MessageType.UNSUBSCRIBE,
-    unsubscribe: Unsubscribe.create({ topic: `servers:${serverName}` })
-  }));
-  term.dispose();
-});
-
-const currentPageTitle = ref("Server Console");
-</script>
