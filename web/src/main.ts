@@ -10,7 +10,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { initWebsocket } from '@/composables/useWebsocket'
-import InternalServerError from '@/views/Errors/InternalServer.vue'
+import InternalServerError from '@/views/errors/InternalServer.vue'
 import { loadConfig } from '@/composables/useConfig'
 
 async function initializeApp() {

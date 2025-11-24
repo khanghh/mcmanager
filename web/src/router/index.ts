@@ -39,6 +39,14 @@ const router = createRouter({
       },
     },
     ...serverRoutes,
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('../views/errors/NotFound.vue'),
+      meta: {
+        title: '404 Not Found',
+      },
+    },
   ],
 })
 
