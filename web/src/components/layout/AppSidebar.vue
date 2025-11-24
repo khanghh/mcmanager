@@ -163,7 +163,6 @@ import { useRoute } from "vue-router";
 
 import { ChevronDownIcon, HorizontalDots } from "@/icons";
 import * as Icons from "@/icons";
-import SidebarWidget from "./SidebarWidget.vue";
 import { useSidebar } from "@/composables/useSidebar";
 import { useConfig } from "@/composables/useConfig";
 

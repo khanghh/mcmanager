@@ -6,7 +6,7 @@ const config = useConfig()
 const serverRoutes = config.value?.servers.map((server) => ({
   path: `/servers/${server.name.toLowerCase()}`,
   name: `${server.name}`,
-  component: () => import('../views/server/Console.vue'),
+  component: () => import('../views/server/Dashboard.vue'),
   meta: {
     title: `${server.name}`,
   },

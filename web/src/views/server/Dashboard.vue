@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, type Ref } from "vue";
-import { useRoute } from "vue-router";
+import { ref, onMounted, onBeforeUnmount, computed, watch, type Ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
@@ -52,14 +52,27 @@ const uptime: Ref<number> = ref(0);
 
 const serverName = (route.params.name as string) || route.path.split('/')[2];
 const quickCommands = ["help", "list", "stop", "reload"] as const;
-const activeTab = ref<'console' | 'code-editor' | 'file-manager' | 'plugins' | 'backups' | 'settings'>('console');
+const router = useRouter();
+const validTabs = ['console', 'code-editor', 'file-manager', 'plugins', 'backups', 'settings'] as const;
+type TabType = typeof validTabs[number];
 
-const switchTab = (tab: 'console' | 'code-editor' | 'file-manager' | 'plugins' | 'backups' | 'settings') => {
-  activeTab.value = tab;
+const activeTab = ref<TabType>('console');
 
-  // Fix terminal display when switching to console tab
+const switchTab = (tab: TabType) => {
+  router.push({ query: { ...route.query, tab } });
+};
+
+watch(() => route.query.tab, (newTab) => {
+  const tab = (newTab as string);
+  if (tab && validTabs.includes(tab as TabType)) {
+    activeTab.value = tab as TabType;
+  } else {
+    activeTab.value = 'console';
+  }
+}, { immediate: true });
+
+watch(activeTab, (tab) => {
   if (tab === 'console' && fitAddon) {
-    // Use nextTick to ensure the DOM has updated before resizing
     setTimeout(() => {
       try {
         fitAddon.fit();
@@ -68,13 +81,14 @@ const switchTab = (tab: 'console' | 'code-editor' | 'file-manager' | 'plugins' |
       }
     }, 100);
   }
-};
+});
 
 let term!: Terminal;
 let fitAddon!: FitAddon;
 let ws!: UseWebsocket;
 let fetchStateTimer!: number;
 let uptimeTimer!: number;
+let resizeObserver!: ResizeObserver;
 
 // computed
 const isStopped = computed(() => serverState.value?.status === "stopped" || serverState.value?.status === "unknown");
@@ -151,6 +165,7 @@ const initTerminal = () => {
   term.onData((data) => {
     sendInput(encoder.encode(data));
   });
+  resizeObserver = new ResizeObserver(() => fitAddon.fit());
   term.attachCustomKeyEventHandler((arg) => {
     if (arg.ctrlKey && arg.code === "KeyC" && arg.type === "keydown") {
       const selection = term.getSelection();
@@ -266,9 +281,12 @@ onMounted(async () => {
   if (notFound.value) return;
 
   initTerminal();
-  window.addEventListener("resize", () => {
-    fitAddon.fit();
-  });
+  // Use ResizeObserver to handle container resize
+
+
+  if (terminalContainer.value) {
+    resizeObserver.observe(terminalContainer.value);
+  }
 
   // connection events
   ws = useWebsocket();
@@ -310,9 +328,8 @@ onBeforeUnmount(() => {
   if (fetchStateTimer) clearInterval(fetchStateTimer);
   if (uptimeTimer) clearInterval(uptimeTimer);
   if (notFound.value) return;
-  window.removeEventListener("resize", () => {
-    fitAddon.fit();
-  });
+
+  resizeObserver.disconnect();
   ws.send(Message.create({
     type: MessageType.UNSUBSCRIBE,
     unsubscribe: Unsubscribe.create({ topic: `servers:${serverName}` })
@@ -343,8 +360,11 @@ const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"])
           <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-gray-600 dark:text-gray-400">
             <div class="flex items-center gap-2">
               <PhUsersThreeIcon class="text-indigo-500" weight="fill" />
-              <span>Online: <strong class="text-gray-900 dark:text-white">{{ isRunning ? '0 / 0' : '0 / 0'
-                  }}</strong></span>
+              <span>Online:
+                <strong class="text-gray-900 dark:text-white">
+                  {{ isRunning ? '0 / 0' : '0 / 0' }}
+                </strong>
+              </span>
             </div>
             <div class="flex items-center gap-2">
               <PhClockIcon class="text-purple-500" weight="fill" />
@@ -490,7 +510,8 @@ const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"])
               <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span>Quick commands:</span>
                 <button v-for="qc in quickCommands" :key="qc" class="hover:text-blue-500 transition-colors"
-                  @click="applyQuickCommand(qc)">{{ qc }}</button>
+                  @click="applyQuickCommand(qc)">{{ qc }}
+                </button>
               </div>
             </div>
           </div>
