@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -76,13 +77,20 @@ func printVersion(cli *cli.Context) error {
 	return nil
 }
 
-func mustLoadAppConfig(cli *cli.Context) *config.AppConfig {
-	configFile := cli.String(configFileFlag.Name)
-	config, err := config.LoadAppConfig(configFile)
+func mustLoadAppConfig(fileName string) *config.AppConfig {
+	appConfig, err := config.LoadAppConfig(fileName)
 	if err != nil {
-		log.Fatalf("could not load config file: %v", err)
+		if os.IsNotExist(err) {
+			appConfig, err = config.CreateEmptyConfig(fileName)
+			if err != nil {
+				log.Fatalf("could not create default config file %s: %v", fileName, err)
+			}
+		}
+		if err != nil {
+			log.Fatalf("could not load config file %s: %v", fileName, err)
+		}
 	}
-	return config
+	return appConfig
 }
 
 func getRunnerAPIURLs(runnerCfgs []config.ServerConfig) map[string]string {
@@ -120,9 +128,10 @@ func mustInitMCManagerService(servers []config.ServerConfig) *manager.MCManagerS
 func run(cli *cli.Context) error {
 	staticDir := cli.String(staticDir.Name)
 	listenAddr := cli.String(listenFlag.Name)
+	configFile := cli.String(configFileFlag.Name)
 
 	// config
-	appConfig := mustLoadAppConfig(cli)
+	appConfig := mustLoadAppConfig(configFile)
 	configData := appConfig.Value()
 	runnerAPIURLs := getRunnerAPIURLs(configData.Servers)
 
@@ -165,6 +174,15 @@ func run(cli *cli.Context) error {
 			os.Exit(1)
 		}()
 		return ctx.SendStatus(fiber.StatusOK)
+	})
+	// SPA fallback: serve index.html for any non /ws or /api path
+	router.Get("/*", func(ctx *fiber.Ctx) error {
+		p := ctx.Path()
+		if strings.HasPrefix(p, "/api") || strings.HasPrefix(p, "/ws") {
+			return fiber.ErrNotFound
+		}
+		ctx.Set(fiber.HeaderContentType, "text/html")
+		return ctx.SendFile(filepath.Join(staticDir, "index.html"))
 	})
 
 	sigCh := make(chan os.Signal, 2)

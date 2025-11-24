@@ -6,10 +6,6 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-const (
-	DefaultListenAddr = ":3000"
-)
-
 type ConfigData struct {
 	Servers []ServerConfig         `yaml:"servers"`
 	VSCode  map[string]interface{} `yaml:"vscode"`
@@ -75,6 +71,23 @@ func (c *AppConfig) Save(data []byte) error {
 	c.configData = configData
 	c.changed = true
 	return nil
+}
+
+func CreateEmptyConfig(filename string) (*AppConfig, error) {
+	defaultConfig := &ConfigData{
+		Servers: []ServerConfig{},
+		VSCode:  map[string]interface{}{},
+	}
+	data, _ := yaml.Marshal(defaultConfig)
+	if err := os.WriteFile(filename, data, 0644); err != nil {
+		return nil, err
+	}
+	return &AppConfig{
+		configFile: filename,
+		configData: defaultConfig,
+		raw:        data,
+		changed:    true,
+	}, nil
 }
 
 func LoadAppConfig(filename string) (*AppConfig, error) {
