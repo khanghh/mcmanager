@@ -39,7 +39,7 @@ RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 RUN go install golang.org/x/tools/gopls@latest
 RUN go install golang.org/x/tools/cmd/goimports@latest
-RUN go install github.com/go-delve/delve/cmd/dlv@lates
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 WORKDIR /workdir
 
