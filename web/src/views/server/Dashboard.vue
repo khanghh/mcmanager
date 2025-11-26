@@ -32,6 +32,7 @@ import {
   PhPlugIcon,
   PhArchiveIcon,
   PhGearIcon,
+  PhCopyIcon,
 } from "@/icons";
 
 // composable variables
@@ -249,7 +250,6 @@ const disconnectConsole = (svName: string) => {
 
 const fetchServerState = async () => {
   try {
-    isLoadingState.value = true;
     serverState.value = await api.getServerState(serverName.value);
     serverStatus.value = serverState.value.status;
     if (serverState.value.uptimeSec !== undefined) {
@@ -328,6 +328,7 @@ watch(serverName, async (newName, oldName) => {
 // Vue lifecycle
 onMounted(async () => {
   // Load server state first; if not found show 404 and bail out
+  isLoadingState.value = true;
   await fetchServerState();
 
   initConsole();
@@ -387,6 +388,14 @@ watch(() => route.query.tab, (newTab) => {
           </div>
           <div class="hidden sm:block h-8 w-px bg-gray-200 dark:bg-gray-800"></div>
           <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-gray-600 dark:text-gray-400">
+            <div class="flex items-center gap-2" v-if="serverState?.ipAddress">
+              <PhPlugIcon class="text-blue-500" weight="fill" />
+              <span>IP: <strong class="text-gray-900 dark:text-white">{{ serverState.ipAddress }}</strong></span>
+              <button @click="copyText(serverState.ipAddress)"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <PhCopyIcon class="w-4 h-4" />
+              </button>
+            </div>
             <div class="flex items-center gap-2">
               <PhUsersThreeIcon class="text-indigo-500" weight="fill" />
               <span>Online:
@@ -499,8 +508,10 @@ watch(() => route.query.tab, (newTab) => {
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <CPUCard :cpuPercentage="cpuPercentage" :cpuCount="cpuCount" :loading="isLoadingState" />
             <MemoryCard :usage="serverState?.memoryUsage" :limit="serverState?.memoryLimit"
-              :percentage="memoryPercentage" :loading="isLoadingState" />
-            <DiskCard :usage="serverState?.diskUsage" :size="serverState?.diskSize" :percentage="diskPercentage" :loading="isLoadingState" />
+              :percentage="memoryPercentage"
+              :loading="isLoadingState" />
+            <DiskCard :usage="serverState?.diskUsage" :size="serverState?.diskSize" :percentage="diskPercentage"
+              :loading="isLoadingState" />
             <UptimeCard :uptime="uptime" :loading="isLoadingState" />
           </div>
           <div

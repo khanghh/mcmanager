@@ -15,8 +15,7 @@
         <router-link
           v-if="showLink"
           :to="linkHref"
-          class="inline-block mt-3 text-sm font-medium text-gray-500 underline dark:text-gray-400"
-        >
+          class="inline-block mt-3 text-sm font-medium text-gray-500 underline dark:text-gray-400">
           {{ linkText }}
         </router-link>
       </div>
@@ -25,8 +24,8 @@
 </template>
 
 <script setup lang="ts">
-import { SuccessIcon, ErrorIcon, WarningIcon, InfoCircleIcon } from '@/icons'
-import { computed } from 'vue'
+import { PhCheckCircleIcon, PhXCircleIcon, PhWarningIcon, PhInfoIcon } from '@/icons'
+
 
 interface AlertProps {
   variant: 'success' | 'error' | 'warning' | 'info'
@@ -37,7 +36,7 @@ interface AlertProps {
   linkText?: string
 }
 
-const props = withDefaults(defineProps<AlertProps>(), {
+withDefaults(defineProps<AlertProps>(), {
   showLink: false,
   linkHref: '#',
   linkText: 'Learn more',
@@ -64,9 +63,9 @@ const variantClasses = {
 }
 
 const icons = {
-  success: SuccessIcon,
-  error: ErrorIcon,
-  warning: WarningIcon,
-  info: InfoCircleIcon,
+  success: PhCheckCircleIcon,
+  error: PhXCircleIcon,
+  warning: PhWarningIcon,
+  info: PhInfoIcon,
 }
 </script>
