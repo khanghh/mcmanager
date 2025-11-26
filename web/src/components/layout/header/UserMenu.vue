@@ -4,28 +4,19 @@
       class="flex items-center text-gray-700 dark:text-gray-400"
       @click.prevent="toggleDropdown">
       <span class="mr-3 overflow-hidden rounded-full h-11 w-11">
-        <img src="/images/user/owner.jpg" alt="User" />
+        <img :src="gravatarUrl" alt="User" />
       </span>
-
-      <span class="block mr-1 font-medium text-theme-sm">Musharof </span>
-
-      <PhCaretDownIcon :class="{ 'rotate-180': dropdownOpen }" />
     </button>
 
     <!-- Dropdown Start -->
     <div
       v-if="dropdownOpen"
       class="absolute right-0 mt-[17px] flex w-[260px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
-      <div>
-        <span class="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-          Musharof Chowdhury
-        </span>
-        <span class="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-          randomuser@pimjo.com
-        </span>
-      </div>
+      <span class="block px-3 py-2 font-medium text-gray-700 text-theme-md dark:text-gray-400">
+        {{ userEmail }}
+      </span>
 
-      <ul class="flex flex-col gap-1 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
+      <ul v-if="menuItems.length > 0" class="flex flex-col gap-1 border-gray-200 dark:border-gray-800">
         <li v-for="item in menuItems" :key="item.href">
           <router-link
             :to="item.href"
@@ -38,32 +29,45 @@
           </router-link>
         </li>
       </ul>
-      <router-link
-        to="/signin"
-        @click="signOut"
+      <div class="pt-2 border-b dark:border-gray-600"></div>
+      <a href="/cdn-cgi/access/logout"
         class="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
         <PhSignOutIcon
           class="text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300" />
         Sign out
-      </router-link>
+      </a>
     </div>
     <!-- Dropdown End -->
   </div>
 </template>
 
 <script setup lang="ts">
-import { PhUserCircleIcon, PhCaretDownIcon, PhSignOutIcon, PhGearIcon, PhInfoIcon } from '@/icons'
+import { PhSignOutIcon } from '@/icons'
 import { RouterLink } from 'vue-router'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, type Component, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useConfig } from '@/composables/useConfig'
+import md5 from 'blueimp-md5'
 
+type MenuItem = {
+  href: string
+  icon: Component
+  text: string
+}
+
+const config = useConfig()
 const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
+const menuItems = ref<MenuItem[]>([])
+const userEmail = ref<string>()
 
-const menuItems = [
-  { href: '/profile', icon: PhUserCircleIcon, text: 'Edit profile' },
-  { href: '/chat', icon: PhGearIcon, text: 'Account settings' },
-  { href: '/profile', icon: PhInfoIcon, text: 'Support' },
-]
+const gravatarUrl = computed<string>(() => {
+  let hashStr = ''
+  if (userEmail.value) {
+    const email = userEmail.value.toLowerCase().trim()
+    hashStr = md5(email)
+  }
+  return `https://www.gravatar.com/avatar/${hashStr}?d=identicon&s=44`
+})
 
 const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value
@@ -71,12 +75,6 @@ const toggleDropdown = () => {
 
 const closeDropdown = () => {
   dropdownOpen.value = false
-}
-
-const signOut = () => {
-  // Implement sign out logic here
-  console.log('Signing out...')
-  closeDropdown()
 }
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -87,9 +85,13 @@ const handleClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  if (config.value?.userEmail) {
+    userEmail.value = config.value.userEmail
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
+
 </script>

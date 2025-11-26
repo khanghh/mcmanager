@@ -8,7 +8,10 @@ type ServerConfig = {
 }
 
 export interface AppConfig {
+  cfAppDomain: string;
   servers: ServerConfig[];
+  vscode: any;
+  userEmail?: string;
   [key: string]: any;
 }
 
