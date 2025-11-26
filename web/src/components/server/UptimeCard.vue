@@ -1,5 +1,6 @@
 <template>
-  <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+  <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm"
+    :class="{ 'animate-pulse': loading }">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Uptime</h3>
       <div
@@ -7,7 +8,9 @@
         <PhClockIcon class="w-5 h-5" />
       </div>
     </div>
-    <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ formatUptime(uptime) }}
+    <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <span v-if="loading" class="inline-block w-28 h-8 bg-gray-300 dark:bg-slate-600 rounded"></span>
+      <template v-else>{{ formatUptime(uptime) }}</template>
     </p>
     <p class="text-sm text-gray-500 dark:text-gray-400">Since last restart</p>
   </div>
@@ -20,6 +23,10 @@ defineProps({
   uptime: {
     type: Number,
     default: 0,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
   },
 });
 

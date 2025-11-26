@@ -58,6 +58,7 @@ const serverStatus: Ref<string> = ref("unknown");
 const uptime: Ref<number> = ref(0);
 const activeTab = ref<TabType>('console');
 const vscodeFrame = ref<HTMLIFrameElement | null>(null);
+const isLoadingState: Ref<boolean> = ref(true);
 
 // variables
 let term!: Terminal;
@@ -248,6 +249,7 @@ const disconnectConsole = (svName: string) => {
 
 const fetchServerState = async () => {
   try {
+    isLoadingState.value = true;
     serverState.value = await api.getServerState(serverName.value);
     serverStatus.value = serverState.value.status;
     if (serverState.value.uptimeSec !== undefined) {
@@ -255,6 +257,8 @@ const fetchServerState = async () => {
     }
   } catch {
     serverStatus.value = "unknown"
+  } finally {
+    isLoadingState.value = false;
   }
 }
 
@@ -294,6 +298,7 @@ watch(serverName, async (newName, oldName) => {
     }
 
     // 2. Reset state
+    isLoadingState.value = true;
     serverState.value = null;
     serverStatus.value = "unknown";
     uptime.value = 0;
@@ -492,11 +497,11 @@ watch(() => route.query.tab, (newTab) => {
         <!-- Console Tab Content -->
         <div v-show="activeTab === 'console'" class="flex flex-col gap-4 p-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <CPUCard :cpuPercentage="cpuPercentage" :cpuCount="cpuCount" />
+            <CPUCard :cpuPercentage="cpuPercentage" :cpuCount="cpuCount" :loading="isLoadingState" />
             <MemoryCard :usage="serverState?.memoryUsage" :limit="serverState?.memoryLimit"
-              :percentage="memoryPercentage" />
-            <DiskCard :usage="serverState?.diskUsage" :size="serverState?.diskSize" :percentage="diskPercentage" />
-            <UptimeCard :uptime="uptime" />
+              :percentage="memoryPercentage" :loading="isLoadingState" />
+            <DiskCard :usage="serverState?.diskUsage" :size="serverState?.diskSize" :percentage="diskPercentage" :loading="isLoadingState" />
+            <UptimeCard :uptime="uptime" :loading="isLoadingState" />
           </div>
           <div
             class="flex flex-col rounded-xl border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm overflow-hidden">

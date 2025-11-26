@@ -1,5 +1,6 @@
 <template>
-  <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+  <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm"
+    :class="{ 'animate-pulse': loading }">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Memory</h3>
       <div
@@ -8,10 +9,13 @@
       </div>
     </div>
     <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-      {{ formatBytes(usage) }} / {{ limit === 0 ? 'Unlimited' : formatBytes(limit) }}
+      <span v-if="loading" class="inline-block w-48 h-8 bg-gray-300 dark:bg-slate-600 rounded"></span>
+      <template v-else>
+        {{ formatBytes(usage) }} / {{ limit === 0 ? 'Unlimited' : formatBytes(limit) }}
+      </template>
     </p>
     <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-      <div class="bg-purple-500 h-2 rounded-full transition-all duration-300" :style="{ width: `${percentage}%` }">
+      <div v-if="!loading" class="bg-purple-500 h-2 rounded-full transition-all duration-300" :style="{ width: `${percentage}%` }">
       </div>
     </div>
   </div>
@@ -32,6 +36,10 @@ defineProps({
   percentage: {
     type: Number,
     default: 0,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
   },
 });
 
