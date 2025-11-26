@@ -20,7 +20,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/dashboard',
+      redirect: '/overview',
     },
     {
       path: '/test',
@@ -31,11 +31,11 @@ const router = createRouter({
       },
     },
     {
-      path: '/dashboard',
-      name: 'Dashboard',
-      component: () => import('../views/BlankPage.vue'),
+      path: '/overview',
+      name: 'Overview',
+      component: () => import('../views/Overview.vue'),
       meta: {
-        title: 'Dashboard',
+        title: 'Overview',
       },
     },
     ...serverRoutes,
