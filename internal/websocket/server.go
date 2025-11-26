@@ -83,6 +83,7 @@ func (s *Server) BroadcastTopic(topic string, msg *gen.Message) {
 
 func (s *Server) ServeFiberWS() fiber.Handler {
 	return fiberws.New(func(conn *fiberws.Conn) {
+		fmt.Printf("client %s connected\n", conn.RemoteAddr().String())
 		cl := &Client{
 			conn:   conn,
 			out:    make(chan []byte, 128),
@@ -93,7 +94,7 @@ func (s *Server) ServeFiberWS() fiber.Handler {
 		go cl.readPump()
 		cl.writePump()
 		s.unregister <- cl
-		fmt.Println("client disconnected")
+		fmt.Printf("client %s disconnected\n", conn.RemoteAddr().String())
 	})
 }
 

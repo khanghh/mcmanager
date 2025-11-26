@@ -26,7 +26,6 @@ func MCRunnerProxyHandler(apiURLs map[string]string) fiber.Handler {
 		if queryString := string(ctx.Request().URI().QueryString()); queryString != "" {
 			fullURL = fullURL + "?" + queryString
 		}
-		fmt.Println(fullURL)
 		return proxy.Do(ctx, fullURL)
 	}
 }

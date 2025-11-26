@@ -53,7 +53,6 @@ func VerifyZeroTrustJWT(appConfig *config.AppConfig) fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).SendString(fmt.Sprintf("Failed to parse token claims: %s", err.Error()))
 		}
 		c.Locals(userEmailCtxKey, userInfo.Email)
-		fmt.Println("email:", userInfo.Email)
 
 		return c.Next()
 	}
