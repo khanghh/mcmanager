@@ -52,11 +52,13 @@ import {
   PhSpeedometer,
   PhClock,
   PhX,
-  PhTerminalWindow,
   PhPlugCharging,
   PhPlug,
   PhUsersThree,
   PhCopy,
+  PhTerminal,
+  PhCode,
+  PhPuzzlePiece
 } from "@phosphor-icons/vue";
 
 
@@ -116,8 +118,10 @@ export const PhMemoryIcon = PhMemory;
 export const PhSpeedometerIcon = PhSpeedometer;
 export const PhClockIcon = PhClock;
 export const PhXIcon = PhX;
-export const PhTerminalWindowIcon = PhTerminalWindow;
+export const PhTerminalIcon = PhTerminal;
 export const PhPlugIcon = PhPlug;
 export const PhPlugChargingIcon = PhPlugCharging;
-export const PhHardDrivesIcon = PhHardDrives;
 export const PhCopyIcon = PhCopy;
+export const PhCodeIcon = PhCode;
+export const PhHardDrivesIcon = PhHardDrives;
+export const PhPuzzlePieceIcon = PhPuzzlePiece;

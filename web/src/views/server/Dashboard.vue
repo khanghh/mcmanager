@@ -26,13 +26,14 @@ import {
   PhPaperPlaneRightIcon,
   PhUsersThreeIcon,
   PhClockIcon,
-  PhTerminalWindowIcon,
-  PhFileTextIcon,
+  PhTerminalIcon,
+  PhCodeIcon,
   PhFolderIcon,
   PhPlugIcon,
   PhArchiveIcon,
   PhGearIcon,
   PhCopyIcon,
+  PhPuzzlePieceIcon,
 } from "@/icons";
 
 // composable variables
@@ -60,6 +61,7 @@ const uptime: Ref<number> = ref(0);
 const activeTab = ref<TabType>('console');
 const vscodeFrame = ref<HTMLIFrameElement | null>(null);
 const isLoadingState: Ref<boolean> = ref(true);
+const isLoadingCodeEditor: Ref<boolean> = ref(false);
 
 // variables
 let term!: Terminal;
@@ -174,6 +176,7 @@ const onFrameLoad = () => {
   if (!vscodeFrame.value?.contentWindow) return;
   const apiURL = `${window.location.origin}/api/servers/${serverName.value}/fs`;
   vscodeFrame.value.contentWindow.postMessage({ type: 'init', apiURL: apiURL });
+  isLoadingCodeEditor.value = false;
 };
 
 const startServer = async () => {
@@ -318,9 +321,16 @@ watch(serverName, async (newName, oldName) => {
     }
 
     // 6. Update VS Code frame if active
-    if (activeTab.value === 'code-editor') {
-      // Force iframe reload or update
-      onFrameLoad();
+    if (activeTab.value === 'code-editor' && vscodeFrame.value) {
+      // Force iframe reload by resetting src
+      isLoadingCodeEditor.value = true;
+      const currentSrc = vscodeFrame.value.src;
+      vscodeFrame.value.src = '';
+      setTimeout(() => {
+        if (vscodeFrame.value) {
+          vscodeFrame.value.src = currentSrc;
+        }
+      }, 0);
     }
   }
 });
@@ -366,6 +376,9 @@ watch(() => route.query.tab, (newTab) => {
   if (activeTab.value === 'console' && fitAddon) {
     fitAddon.fit();
   }
+  if (activeTab.value === 'code-editor') {
+    isLoadingCodeEditor.value = true;
+  }
 }, { immediate: true });
 
 </script>
@@ -389,15 +402,15 @@ watch(() => route.query.tab, (newTab) => {
           <div class="hidden sm:block h-8 w-px bg-gray-200 dark:bg-gray-800"></div>
           <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-gray-600 dark:text-gray-400">
             <div class="flex items-center gap-2" v-if="serverState?.ipAddress">
-              <PhPlugIcon class="text-blue-500" weight="fill" />
+              <PhPlugIcon class="w-4 h-4 text-blue-500" weight="fill" />
               <span>IP: <strong class="text-gray-900 dark:text-white">{{ serverState.ipAddress }}</strong></span>
               <button @click="copyText(serverState.ipAddress)"
                 class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <PhCopyIcon class="w-4 h-4" />
+                <PhCopyIcon class="w-4 h-4" weight="bold" />
               </button>
             </div>
             <div class="flex items-center gap-2">
-              <PhUsersThreeIcon class="text-indigo-500" weight="fill" />
+              <PhUsersThreeIcon class="w-4 h-4 text-indigo-500" weight="fill" />
               <span>Online:
                 <strong class="text-gray-900 dark:text-white">
                   {{ isRunning ? '0 / 0' : '0 / 0' }}
@@ -405,7 +418,7 @@ watch(() => route.query.tab, (newTab) => {
               </span>
             </div>
             <div class="flex items-center gap-2">
-              <PhClockIcon class="text-purple-500" weight="fill" />
+              <PhClockIcon class="w-4 h-4 text-purple-500" weight="fill" />
               <span>Uptime: <strong class="text-gray-900 dark:text-white">{{ formattedUptime }}</strong></span>
             </div>
           </div>
@@ -450,7 +463,7 @@ watch(() => route.query.tab, (newTab) => {
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           ]">
-            <PhTerminalWindowIcon class="w-5 h-5" />
+            <PhTerminalIcon class="w-5 h-5" weight="bold" />
             <span>Console</span>
           </button>
           <button @click="switchTab('code-editor')" :class="[
@@ -459,7 +472,7 @@ watch(() => route.query.tab, (newTab) => {
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           ]">
-            <PhFileTextIcon class="w-5 h-5" />
+            <PhCodeIcon class="w-5 h-5" weight="bold" />
             <span>Code Editor</span>
           </button>
           <button @click="switchTab('file-manager')" :class="[
@@ -468,7 +481,7 @@ watch(() => route.query.tab, (newTab) => {
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           ]">
-            <PhFolderIcon class="w-5 h-5" />
+            <PhFolderIcon class="w-5 h-5" weight="bold" />
             <span>File Manager</span>
           </button>
           <button @click="switchTab('plugins')" :class="[
@@ -477,7 +490,7 @@ watch(() => route.query.tab, (newTab) => {
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           ]">
-            <PhPlugIcon class="w-5 h-5" />
+            <PhPuzzlePieceIcon class="w-5 h-5" weight="bold" />
             <span>Plugins</span>
           </button>
           <button @click="switchTab('backups')" :class="[
@@ -486,7 +499,7 @@ watch(() => route.query.tab, (newTab) => {
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           ]">
-            <PhArchiveIcon class="w-5 h-5" />
+            <PhArchiveIcon class="w-5 h-5" weight="bold" />
             <span>Backups</span>
           </button>
           <button @click="switchTab('settings')" :class="[
@@ -495,7 +508,7 @@ watch(() => route.query.tab, (newTab) => {
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-slate-900/50'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           ]">
-            <PhGearIcon class="w-5 h-5" />
+            <PhGearIcon class="w-5 h-5" weight="bold" />
             <span>Settings</span>
           </button>
         </div>
@@ -558,7 +571,17 @@ watch(() => route.query.tab, (newTab) => {
         </div>
 
         <!-- Code Editor Tab Content -->
-        <div v-show="activeTab === 'code-editor'" class="h-[calc(100vh-200px)]">
+        <div v-show="activeTab === 'code-editor'" class="h-[calc(100vh-200px)] relative">
+          <!-- Loading Indicator -->
+          <div v-if="isLoadingCodeEditor"
+            class="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-10">
+            <div class="flex flex-col items-center gap-4">
+              <div
+                class="w-12 h-12 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin">
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Loading Code Editor...</p>
+            </div>
+          </div>
           <iframe ref="vscodeFrame" src="/vscode/" class="h-full w-full border-0 rounded-lg"
             @load="onFrameLoad"></iframe>
         </div>

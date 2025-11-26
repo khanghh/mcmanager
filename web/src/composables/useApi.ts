@@ -20,6 +20,7 @@ export type ServerState = {
   status: ServerStatus
   tps: number
   pid?: number
+  ipAddress?: string
   memoryUsage?: number
   memoryLimit?: number
   cpuUsage?: number

@@ -53,7 +53,7 @@
               <template v-if="isExpanded || isMobileOpen">
                 {{ menuGroup.title }}
               </template>
-              <HorizontalDots v-else />
+              <PhDotsThreeIcon v-else />
             </h2>
             <ul class="flex flex-col gap-4">
               <li v-for="(item, index) in menuGroup.items" :key="item.name">
@@ -69,7 +69,7 @@
                     <component :is="resolveIcon(item.icon)" class="w-full h-full" />
                   </span>
                   <span v-if="isExpanded || isMobileOpen" class="menu-item-text">{{ item.name }}</span>
-                  <ChevronDownIcon v-if="isExpanded || isMobileOpen" :class="[
+                  <PhCaretDownIcon v-if="isExpanded || isMobileOpen" :class="[
                     'ml-auto w-5 h-5 transition-transform duration-200',
                     {
                       'rotate-180 text-brand-500': isSubmenuOpen(groupIndex, index),
@@ -132,14 +132,34 @@
   </aside>
 </template>
 
-<script setup>
-import { ref, computed } from "vue";
+<script setup lang="ts">
+import { computed } from "vue";
 import { useRoute } from "vue-router";
 
-import { ChevronDownIcon, HorizontalDots } from "@/icons";
+import { PhCaretDownIcon, PhDotsThreeIcon } from "@/icons";
 import * as Icons from "@/icons";
 import { useSidebar } from "@/composables/useSidebar";
 import { useConfig } from "@/composables/useConfig";
+
+interface SubItem {
+  name: string;
+  path: string;
+  icon?: string;
+  new?: boolean;
+  pro?: boolean;
+}
+
+interface MenuItem {
+  icon: string;
+  name: string;
+  path?: string;
+  subItems?: SubItem[];
+}
+
+interface MenuGroup {
+  title: string;
+  items: MenuItem[];
+}
 
 const route = useRoute();
 
@@ -147,30 +167,63 @@ const { isExpanded, isMobileOpen, openSubmenu } = useSidebar();
 const config = useConfig();
 
 // Resolve icon component from its string name. Fallback to GridIcon.
-const resolveIcon = (name) => {
-  if (!name) return Icons.GridIcon;
-  return Icons[name] || Icons.GridIcon;
+const resolveIcon = (name: string | undefined) => {
+  if (!name) return Icons.PhSquaresFourIcon;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (Icons as any)[name] || Icons.PhSquaresFourIcon;
 };
 
-const serverMenuItems = computed(() => {
+const serverMenuItems = computed<MenuItem[]>(() => {
   if (!config.value || !config.value.servers) {
     return [];
   }
   return config.value.servers.map((item) => ({
-    icon: item.icon || "BoxCubeIcon",
+    icon: item.icon || "PhCubeIcon",
     name: item.name,
     path: `/servers/${item.name.toLowerCase()}`,
+    subItems: [
+      {
+        name: "Console",
+        path: `/servers/${item.name.toLowerCase()}?tab=console`,
+        icon: "PhTerminalIcon",
+      },
+      {
+        name: "Code Editor",
+        path: `/servers/${item.name.toLowerCase()}?tab=code-editor`,
+        icon: "PhCodeIcon",
+      },
+      {
+        name: "File Manager",
+        path: `/servers/${item.name.toLowerCase()}?tab=file-manager`,
+        icon: "PhFolderIcon",
+      },
+      {
+        name: "Plugins",
+        path: `/servers/${item.name.toLowerCase()}?tab=plugins`,
+        icon: "PhPuzzlePieceIcon",
+      },
+      {
+        name: "Backups",
+        path: `/servers/${item.name.toLowerCase()}?tab=backups`,
+        icon: "PhArchiveIcon",
+      },
+      {
+        name: "Settings",
+        path: `/servers/${item.name.toLowerCase()}?tab=settings`,
+        icon: "PhGearIcon",
+      }
+    ]
   }));
 });
 
-const menuGroups = computed(() => [
+const menuGroups = computed<MenuGroup[]>(() => [
   {
     title: "Navigation",
     items: [
       {
         icon: "PhSpeedometerIcon",
         name: "Overview",
-        path: "/dashboard",
+        path: "/overview",
       },
     ],
   },
@@ -180,9 +233,20 @@ const menuGroups = computed(() => [
   },
 ]);
 
-const isActive = (path) => route.path === path;
+const isActive = (path: string) => {
+  if (path.includes('?')) {
+    const [pathPart, queryPart] = path.split('?');
+    const queryParams = new URLSearchParams(queryPart);
+    if (route.path !== pathPart) return false;
+    for (const [key, value] of queryParams.entries()) {
+      if (route.query[key] !== value) return false;
+    }
+    return true;
+  }
+  return route.path === path;
+};
 
-const toggleSubmenu = (groupIndex, itemIndex) => {
+const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;
   openSubmenu.value = openSubmenu.value === key ? null : key;
 };
@@ -196,7 +260,7 @@ const isAnySubmenuRouteActive = computed(() => {
   );
 });
 
-const isSubmenuOpen = (groupIndex, itemIndex) => {
+const isSubmenuOpen = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;
   return (
     openSubmenu.value === key ||
@@ -208,36 +272,42 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
 };
 
 // Smooth expand/collapse for submenu
-const beforeEnter = (el) => {
-  el.style.height = "0px";
-  el.style.overflow = "hidden";
+const beforeEnter = (el: Element) => {
+  const elem = el as HTMLElement;
+  elem.style.height = "0px";
+  elem.style.overflow = "hidden";
 };
 
-const enter = (el) => {
+const enter = (el: Element) => {
+  const elem = el as HTMLElement;
   // Expand to full height
-  el.style.height = el.scrollHeight + "px";
+  elem.style.height = elem.scrollHeight + "px";
 };
 
-const afterEnter = (el) => {
+const afterEnter = (el: Element) => {
+  const elem = el as HTMLElement;
   // Cleanup inline styles
-  el.style.height = "";
-  el.style.overflow = "";
+  elem.style.height = "";
+  elem.style.overflow = "";
 };
 
-const beforeLeave = (el) => {
+const beforeLeave = (el: Element) => {
+  const elem = el as HTMLElement;
   // Set current height to allow transition to zero
-  el.style.height = el.scrollHeight + "px";
-  el.style.overflow = "hidden";
+  elem.style.height = elem.scrollHeight + "px";
+  elem.style.overflow = "hidden";
 };
 
-const leave = (el) => {
+const leave = (el: Element) => {
+  const elem = el as HTMLElement;
   // Force reflow then collapse
-  void el.offsetHeight;
-  el.style.height = "0px";
+  void elem.offsetHeight;
+  elem.style.height = "0px";
 };
 
-const afterLeave = (el) => {
-  el.style.height = "";
-  el.style.overflow = "";
+const afterLeave = (el: Element) => {
+  const elem = el as HTMLElement;
+  elem.style.height = "";
+  elem.style.overflow = "";
 };
 </script>
