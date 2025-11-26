@@ -42,7 +42,7 @@ const router = useRouter();
 const { copyText } = useClipboard();
 
 // constants
-const serverName = (route.params.name as string) || route.path.split('/')[2];
+const serverName = computed(() => (route.params.name as string) || route.path.split('/')[2]);
 const quickCommands = ["help", "list", "stop", "reload"] as const;
 const validTabs = ['console', 'code-editor', 'file-manager', 'plugins', 'backups', 'settings'] as const;
 type TabType = typeof validTabs[number];
@@ -68,7 +68,7 @@ let uptimeTimer!: number;
 let resizeObserver!: ResizeObserver;
 
 // computed
-const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"]);
+const breadcrumbPath = computed(() => ["servers", serverName.value, "Server Console"]);
 const isStopped = computed(() => serverState.value?.status === "stopped" || serverState.value?.status === "unknown");
 const isRunning = computed(() => serverState.value && serverState.value.status === "running");
 const cpuCount = computed(() => serverState.value?.cpuLimit);
@@ -165,59 +165,59 @@ const formatUptime = (seconds: number | undefined) => {
 const applyQuickCommand = (cmd: string) => {
   command.value = cmd;
   // Focus input for immediate editing/sending
-  try { commandInput.value?.focus(); } catch (_) { /* noop */ }
+  try { commandInput.value?.focus(); } catch { /* noop */ }
 };
 
 const onFrameLoad = () => {
   if (!vscodeFrame.value?.contentWindow) return;
-  const apiURL = `${window.location.origin}/api/servers/${serverName}/fs`;
+  const apiURL = `${window.location.origin}/api/servers/${serverName.value}/fs`;
   vscodeFrame.value.contentWindow.postMessage({ type: 'init', apiURL: apiURL });
 };
 
 const startServer = async () => {
   try {
-    await api.startServer(serverName);
-    toast.info(`${serverName} has been started`);
+    await api.startServer(serverName.value);
+    toast.info(`${serverName.value} has been started`);
   } catch (e) {
-    toast.error(`${serverName} failed to start: ${e}`);
+    toast.error(`${serverName.value} failed to start: ${e}`);
   }
 };
 
 const stopServer = async () => {
   try {
     serverStatus.value = "stopping";
-    await api.stopServer(serverName);
-    toast.info(`${serverName} has been stopped`);
+    await api.stopServer(serverName.value);
+    toast.info(`${serverName.value} has been stopped`);
   } catch (err: ApiError | unknown) {
-    toast.error(`Failed to stop server ${serverName}: ${(err as ApiError)?.message || err}`)
+    toast.error(`Failed to stop server ${serverName.value}: ${(err as ApiError)?.message || err}`)
   }
 };
 
 const restartServer = async () => {
   try {
-    await api.restartServer(serverName);
-    toast.info(`${serverName} has been restarted`);
+    await api.restartServer(serverName.value);
+    toast.info(`${serverName.value} has been restarted`);
   } catch (err: ApiError | unknown) {
-    toast.error(`Failed to restart server ${serverName}: ${(err as ApiError)?.message || err}`)
+    toast.error(`Failed to restart server ${serverName.value}: ${(err as ApiError)?.message || err}`)
   }
 };
 
 const killServer = async () => {
   try {
-    await api.killServer(serverName);
-    toast.info(`${serverName} has been stopped`);
+    await api.killServer(serverName.value);
+    toast.info(`${serverName.value} has been stopped`);
   } catch (err: ApiError | unknown) {
-    toast.error(`Failed to kill server ${serverName}: ${(err as ApiError)?.message || err}`)
+    toast.error(`Failed to kill server ${serverName.value}: ${(err as ApiError)?.message || err}`)
   }
 };
 
 const sendCommand = async () => {
   if (!command.value.trim()) return;
   try {
-    await api.sendCommand(serverName, command.value.trim());
+    await api.sendCommand(serverName.value, command.value.trim());
     command.value = '';
   } catch (e) {
-    toast.error(`${serverName} failed to send command: ${e}`);
+    toast.error(`${serverName.value} failed to send command: ${e}`);
   }
 };
 
@@ -225,28 +225,30 @@ const sendInput = (data: Uint8Array<ArrayBuffer>) => {
   if (!ws.isConnected.value) return;
   const msg = Message.create({
     type: MessageType.CMD_INPUT,
-    cmdInput: CmdInput.create({ id: serverName, data })
+    cmdInput: CmdInput.create({ id: serverName.value, data })
   });
   ws.send(msg);
 }
 
-const connectConsole = () => {
+const connectConsole = (svName: string) => {
+  console.log("connect console:", svName)
   ws.send(Message.create({
     type: MessageType.CMD_CONNECT,
-    cmdConnect: CmdConnect.create({ id: serverName })
+    cmdConnect: CmdConnect.create({ id: svName })
   }))
 }
 
-const disconnectConsole = () => {
+const disconnectConsole = (svName: string) => {
+  console.log("disconnect console:", svName)
   ws.send(Message.create({
     type: MessageType.UNSUBSCRIBE,
-    unsubscribe: Unsubscribe.create({ id: serverName })
+    unsubscribe: Unsubscribe.create({ id: svName })
   }))
 }
 
 const fetchServerState = async () => {
   try {
-    serverState.value = await api.getServerState(serverName);
+    serverState.value = await api.getServerState(serverName.value);
     serverStatus.value = serverState.value.status;
     if (serverState.value.uptimeSec !== undefined) {
       uptime.value = serverState.value.uptimeSec;
@@ -260,7 +262,7 @@ const initWebsocket = () => {
   ws = useWebsocket();
   ws.onopen(() => {
     connected.value = true;
-    connectConsole()
+    connectConsole(serverName.value)
   });
 
   ws.onclose(() => { connected.value = false; });
@@ -273,7 +275,7 @@ const initWebsocket = () => {
         const text = new TextDecoder().decode(msg.cmdOutput.data);
         term.write(text);
         if (autoScroll.value) {
-          try { term?.scrollToBottom?.(); } catch (_) { }
+          try { term?.scrollToBottom?.(); } catch { }
         }
       }
     } else if (msg.type === MessageType.CMD_STATUS) {
@@ -282,6 +284,41 @@ const initWebsocket = () => {
     }
   });
 }
+
+// Watch for server name changes
+watch(serverName, async (newName, oldName) => {
+  if (newName !== oldName) {
+    // 1. Disconnect old console
+    if (oldName && ws && ws.isConnected.value) {
+      disconnectConsole(oldName);
+    }
+
+    // 2. Reset state
+    serverState.value = null;
+    serverStatus.value = "unknown";
+    uptime.value = 0;
+    command.value = "";
+
+    // 3. Clear terminal
+    if (term) {
+      term.clear();
+    }
+
+    // 4. Fetch new state
+    await fetchServerState();
+
+    // 5. Connect new console
+    if (ws && ws.isConnected.value) {
+      connectConsole(newName);
+    }
+
+    // 6. Update VS Code frame if active
+    if (activeTab.value === 'code-editor') {
+      // Force iframe reload or update
+      onFrameLoad();
+    }
+  }
+});
 
 // Vue lifecycle
 onMounted(async () => {
@@ -308,7 +345,7 @@ onBeforeUnmount(() => {
   if (fetchStateTimer) clearInterval(fetchStateTimer);
   if (uptimeTimer) clearInterval(uptimeTimer);
 
-  disconnectConsole()
+  disconnectConsole(serverName.value)
   resizeObserver.disconnect();
   term.dispose();
 });
