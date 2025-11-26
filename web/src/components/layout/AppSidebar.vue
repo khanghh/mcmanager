@@ -59,19 +59,12 @@
               <li v-for="(item, index) in menuGroup.items" :key="item.name">
                 <button v-if="item.subItems" @click="toggleSubmenu(groupIndex, index)" :class="[
                   'menu-item group w-full',
-                  {
-                    'menu-item-active': isSubmenuOpen(groupIndex, index),
-                    'menu-item-inactive': !isSubmenuOpen(groupIndex, index),
-                  },
-                  !isExpanded
-                    ? 'lg:justify-center'
-                    : 'lg:justify-start',
+                  isSubmenuOpen(groupIndex, index) ? 'menu-item-active' : 'menu-item-inactive',
+                  !isExpanded ? 'lg:justify-center' : 'lg:justify-start',
                 ]">
                   <span :class="[
                     'menu-item-icon',
-                    isSubmenuOpen(groupIndex, index)
-                      ? 'menu-item-icon-active'
-                      : 'menu-item-icon-inactive',
+                    isSubmenuOpen(groupIndex, index) ? 'menu-item-icon-active' : 'menu-item-icon-inactive',
                   ]">
                     <component :is="resolveIcon(item.icon)" class="w-full h-full" />
                   </span>
@@ -79,26 +72,17 @@
                   <ChevronDownIcon v-if="isExpanded || isMobileOpen" :class="[
                     'ml-auto w-5 h-5 transition-transform duration-200',
                     {
-                      'rotate-180 text-brand-500': isSubmenuOpen(
-                        groupIndex,
-                        index
-                      ),
+                      'rotate-180 text-brand-500': isSubmenuOpen(groupIndex, index),
                     },
                   ]" />
                 </button>
                 <router-link v-else-if="item.path" :to="item.path" :class="[
                   'menu-item group',
-                  {
-                    'menu-item-active': isActive(item.path),
-                    'menu-item-inactive': !isActive(item.path),
-                  },
+                  isActive(item.path) ? 'menu-item-active' : 'menu-item-inactive',
                 ]">
                   <span :class="[
                     'menu-item-icon',
-                    isActive(item.path)
-                      ? 'menu-item-icon-active'
-                      : 'menu-item-icon-inactive',
-                  ]">
+                    isActive(item.path) ? 'menu-item-icon-active' : 'menu-item-icon-inactive']">
                     <component :is="resolveIcon(item.icon)" class="w-full h-full" />
                   </span>
                   <span v-if="isExpanded || isMobileOpen" class="menu-item-text">{{ item.name }}</span>
@@ -112,15 +96,10 @@
                       <li v-for="subItem in item.subItems" :key="subItem.name">
                         <router-link :to="subItem.path" :class="[
                           'menu-item',
-                          isActive(subItem.path)
-                            ? 'menu-item-active'
-                            : 'menu-item-inactive',
-                        ]">
+                          isActive(subItem.path) ? 'menu-item-active' : 'menu-item-inactive']">
                           <span :class="[
                             'menu-item-icon',
-                            isActive(subItem.path)
-                              ? 'menu-icon-active'
-                              : 'menu-icon-inactive',
+                            isActive(subItem.path) ? 'menu-icon-active' : 'menu-icon-inactive',
                           ]">
                             <component :is="resolveIcon(subItem.icon || item.icon)" class="w-full h-full" />
                           </span>
@@ -128,17 +107,13 @@
                           <span v-if="subItem.new || subItem.pro" class="flex items-center gap-1 ml-auto">
                             <span v-if="subItem.new" :class="[
                               'menu-dropdown-badge',
-                              isActive(subItem.path)
-                                ? 'menu-dropdown-badge-active'
-                                : 'menu-dropdown-badge-inactive',
+                              isActive(subItem.path) ? 'menu-dropdown-badge-active' : 'menu-dropdown-badge-inactive',
                             ]">
                               new
                             </span>
                             <span v-if="subItem.pro" :class="[
                               'menu-dropdown-badge',
-                              isActive(subItem.path)
-                                ? 'menu-dropdown-badge-active'
-                                : 'menu-dropdown-badge-inactive',
+                              isActive(subItem.path) ? 'menu-dropdown-badge-active' : 'menu-dropdown-badge-inactive',
                             ]">
                               pro
                             </span>

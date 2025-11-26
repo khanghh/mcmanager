@@ -8,6 +8,15 @@ import "@xterm/xterm/css/xterm.css";
 import { MessageType, Message, CmdConnect, Unsubscribe, CmdInput } from "@/generated/message";
 import Button from "@/components/ui/Button.vue";
 import Badge from "@/components/ui/Badge.vue";
+import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
+import { useApi, ServerState, ApiError } from "@/composables/useApi";
+import { useWebsocket, UseWebsocket } from "@/composables/useWebsocket";
+import { useToast } from "@/composables/useToast";
+import { useClipboard } from '@/composables/useClipboard';
+import CPUCard from "@/components/server/CPUCard.vue";
+import MemoryCard from "@/components/server/MemoryCard.vue";
+import DiskCard from "@/components/server/DiskCard.vue";
+import UptimeCard from "@/components/server/UptimeCard.vue";
 import {
   PhPlayIcon,
   PhStopIcon,
@@ -24,20 +33,19 @@ import {
   PhArchiveIcon,
   PhGearIcon,
 } from "@/icons";
-import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
-import { useApi, ServerState, ApiError } from "@/composables/useApi";
-import { useWebsocket, UseWebsocket } from "@/composables/useWebsocket";
-import { useToast } from "@/composables/useToast";
-import { useClipboard } from '@/composables/useClipboard';
-import CPUCard from "@/components/server/CPUCard.vue";
-import MemoryCard from "@/components/server/MemoryCard.vue";
-import DiskCard from "@/components/server/DiskCard.vue";
-import UptimeCard from "@/components/server/UptimeCard.vue";
-const { copyText } = useClipboard()
 
+// composable variables
 const route = useRoute();
 const api = useApi();
 const toast = useToast();
+const router = useRouter();
+const { copyText } = useClipboard();
+
+// constants
+const serverName = (route.params.name as string) || route.path.split('/')[2];
+const quickCommands = ["help", "list", "stop", "reload"] as const;
+const validTabs = ['console', 'code-editor', 'file-manager', 'plugins', 'backups', 'settings'] as const;
+type TabType = typeof validTabs[number];
 
 // data variables
 const terminalContainer = ref(null);
@@ -46,43 +54,12 @@ const command: Ref<string> = ref("");
 const commandInput: Ref<HTMLInputElement | null> = ref(null);
 const connected: Ref<boolean> = ref(false);
 const autoScroll: Ref<boolean> = ref(true);
-const notFound: Ref<boolean> = ref(false);
 const serverStatus: Ref<string> = ref("unknown");
 const uptime: Ref<number> = ref(0);
-
-const serverName = (route.params.name as string) || route.path.split('/')[2];
-const quickCommands = ["help", "list", "stop", "reload"] as const;
-const router = useRouter();
-const validTabs = ['console', 'code-editor', 'file-manager', 'plugins', 'backups', 'settings'] as const;
-type TabType = typeof validTabs[number];
-
 const activeTab = ref<TabType>('console');
+const vscodeFrame = ref<HTMLIFrameElement | null>(null);
 
-const switchTab = (tab: TabType) => {
-  router.push({ query: { ...route.query, tab } });
-};
-
-watch(() => route.query.tab, (newTab) => {
-  const tab = (newTab as string);
-  if (tab && validTabs.includes(tab as TabType)) {
-    activeTab.value = tab as TabType;
-  } else {
-    activeTab.value = 'console';
-  }
-}, { immediate: true });
-
-watch(activeTab, (tab) => {
-  if (tab === 'console' && fitAddon) {
-    setTimeout(() => {
-      try {
-        fitAddon.fit();
-      } catch (e) {
-        console.error('Failed to fit terminal:', e);
-      }
-    }, 100);
-  }
-});
-
+// variables
 let term!: Terminal;
 let fitAddon!: FitAddon;
 let ws!: UseWebsocket;
@@ -91,9 +68,11 @@ let uptimeTimer!: number;
 let resizeObserver!: ResizeObserver;
 
 // computed
+const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"]);
 const isStopped = computed(() => serverState.value?.status === "stopped" || serverState.value?.status === "unknown");
 const isRunning = computed(() => serverState.value && serverState.value.status === "running");
 const cpuCount = computed(() => serverState.value?.cpuLimit);
+const formattedUptime = computed(() => formatUptime(uptime.value));
 
 const statusBadgeVariant = computed(() => {
   if (!serverStatus.value) return "secondary";
@@ -116,7 +95,6 @@ const cpuPercentage = computed(() => {
   return Math.round(serverState.value.cpuUsage * 100) / 100;
 });
 
-
 const memoryPercentage = computed(() => {
   if (!serverState.value?.memoryUsage || !serverState.value?.memoryLimit) return 0;
   return Math.min(Math.round((serverState.value.memoryUsage / serverState.value.memoryLimit) * 100), 100);
@@ -127,21 +105,8 @@ const diskPercentage = computed(() => {
   return Math.min(Math.round((serverState.value.diskUsage / serverState.value.diskSize) * 100), 100);
 });
 
-// Format helpers
-
-
-const formatUptime = (seconds: number | undefined) => {
-  if (!seconds) return '00:00:00';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
-const formattedUptime = computed(() => formatUptime(uptime.value));
-
-
-const initTerminal = () => {
+// functions
+const initConsole = () => {
   if (!terminalContainer.value) return;
   const encoder = new TextEncoder();
 
@@ -155,7 +120,7 @@ const initTerminal = () => {
       cursor: "#f4f4f5",
       selectionBackground: "#3f3f46",
     },
-    scrollback: 100,
+    scrollback: 1 * 1024 * 1024,
   });
 
   fitAddon = new FitAddon();
@@ -180,7 +145,35 @@ const initTerminal = () => {
   });
 };
 
-// Action helpers using API
+const clearConsole = () => {
+  term.clear();
+  fitAddon.fit();
+};
+
+const switchTab = (tab: TabType) => {
+  router.push({ query: { ...route.query, tab } });
+};
+
+const formatUptime = (seconds: number | undefined) => {
+  if (!seconds) return '00:00:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+const applyQuickCommand = (cmd: string) => {
+  command.value = cmd;
+  // Focus input for immediate editing/sending
+  try { commandInput.value?.focus(); } catch (_) { /* noop */ }
+};
+
+const onFrameLoad = () => {
+  if (!vscodeFrame.value?.contentWindow) return;
+  const apiURL = `${window.location.origin}/api/servers/${serverName}/fs`;
+  vscodeFrame.value.contentWindow.postMessage({ type: 'init', apiURL: apiURL });
+};
+
 const startServer = async () => {
   try {
     await api.startServer(serverName);
@@ -218,13 +211,8 @@ const killServer = async () => {
   }
 };
 
-const clearConsole = () => {
-  term.clear();
-  fitAddon.fit();
-};
-
 const sendCommand = async () => {
-  if (!command.value.trim() || notFound.value) return;
+  if (!command.value.trim()) return;
   try {
     await api.sendCommand(serverName, command.value.trim());
     command.value = '';
@@ -242,66 +230,44 @@ const sendInput = (data: Uint8Array<ArrayBuffer>) => {
   ws.send(msg);
 }
 
-const applyQuickCommand = (cmd: string) => {
-  command.value = cmd;
-  // Focus input for immediate editing/sending
-  try { commandInput.value?.focus(); } catch (_) { /* noop */ }
-};
+const connectConsole = () => {
+  ws.send(Message.create({
+    type: MessageType.CMD_CONNECT,
+    cmdConnect: CmdConnect.create({ id: serverName })
+  }))
+}
+
+const disconnectConsole = () => {
+  ws.send(Message.create({
+    type: MessageType.UNSUBSCRIBE,
+    unsubscribe: Unsubscribe.create({ id: serverName })
+  }))
+}
 
 const fetchServerState = async () => {
   try {
     serverState.value = await api.getServerState(serverName);
-    notFound.value = false;
     serverStatus.value = serverState.value.status;
     if (serverState.value.uptimeSec !== undefined) {
       uptime.value = serverState.value.uptimeSec;
     }
   } catch {
-    notFound.value = true;
     serverStatus.value = "unknown"
   }
 }
 
-const vscodeFrame = ref<HTMLIFrameElement | null>(null);
-
-const onFrameLoad = () => {
-  if (!vscodeFrame.value?.contentWindow) return;
-
-  const apiURL = `${window.location.origin}/api/servers/${serverName}/fs`;
-
-  vscodeFrame.value.contentWindow.postMessage({
-    type: 'init',
-    apiURL: apiURL
-  }, '*');
-};
-
-onMounted(async () => {
-  // Load server state first; if not found show 404 and bail out
-  await fetchServerState();
-  if (notFound.value) return;
-
-  initTerminal();
-  // Use ResizeObserver to handle container resize
-
-
-  if (terminalContainer.value) {
-    resizeObserver.observe(terminalContainer.value);
-  }
-
-  // connection events
+const initWebsocket = () => {
   ws = useWebsocket();
   ws.onopen(() => {
     connected.value = true;
-    ws.send(Message.create({
-      type: MessageType.CMD_CONNECT,
-      cmdConnect: CmdConnect.create({ id: serverName })
-    }))
+    connectConsole()
   });
+
   ws.onclose(() => { connected.value = false; });
 
-  ws.onmessage((msg) => {
+  ws.onmessage((msg: Message) => {
     if (msg.type === MessageType.ERROR) {
-
+      toast.error(msg.error?.message || 'WebSocket error');
     } else if (msg.type === MessageType.CMD_OUTPUT) {
       if (msg.cmdOutput && term) {
         const text = new TextDecoder().decode(msg.cmdOutput.data);
@@ -315,6 +281,20 @@ onMounted(async () => {
       fetchServerState();
     }
   });
+}
+
+// Vue lifecycle
+onMounted(async () => {
+  // Load server state first; if not found show 404 and bail out
+  await fetchServerState();
+
+  initConsole();
+  // Use ResizeObserver to handle container resize
+  if (terminalContainer.value) {
+    resizeObserver.observe(terminalContainer.value);
+  }
+
+  initWebsocket();
 
   fetchStateTimer = window.setInterval(fetchServerState, 10000);
   uptimeTimer = window.setInterval(() => {
@@ -327,17 +307,24 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (fetchStateTimer) clearInterval(fetchStateTimer);
   if (uptimeTimer) clearInterval(uptimeTimer);
-  if (notFound.value) return;
 
+  disconnectConsole()
   resizeObserver.disconnect();
-  ws.send(Message.create({
-    type: MessageType.UNSUBSCRIBE,
-    unsubscribe: Unsubscribe.create({ topic: `servers:${serverName}` })
-  }));
   term.dispose();
 });
 
-const breadcrumbPath = computed(() => ["servers", serverName, "Server Console"]);
+watch(() => route.query.tab, (newTab) => {
+  const tab = (newTab as string);
+  if (tab && validTabs.includes(tab as TabType)) {
+    activeTab.value = tab as TabType;
+  } else {
+    activeTab.value = 'console';
+  }
+  if (activeTab.value === 'console' && fitAddon) {
+    fitAddon.fit();
+  }
+}, { immediate: true });
+
 </script>
 <template>
   <AdminLayout full-width>
