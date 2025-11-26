@@ -34,6 +34,7 @@ import {
   PhGearIcon,
   PhCopyIcon,
   PhPuzzlePieceIcon,
+  PhCheckIcon,
 } from "@/icons";
 
 // composable variables
@@ -61,7 +62,8 @@ const uptime: Ref<number> = ref(0);
 const activeTab = ref<TabType>('console');
 const vscodeFrame = ref<HTMLIFrameElement | null>(null);
 const isLoadingState: Ref<boolean> = ref(true);
-const isLoadingCodeEditor: Ref<boolean> = ref(false);
+const isShowCodeEditor: Ref<boolean> = ref(false);
+const isCodeEditorLoaded: Ref<boolean> = ref(false);
 
 // variables
 let term!: Terminal;
@@ -175,8 +177,13 @@ const applyQuickCommand = (cmd: string) => {
 const onFrameLoad = () => {
   if (!vscodeFrame.value?.contentWindow) return;
   const apiURL = `${window.location.origin}/api/servers/${serverName.value}/fs`;
-  vscodeFrame.value.contentWindow.postMessage({ type: 'init', apiURL: apiURL });
-  isLoadingCodeEditor.value = false;
+  vscodeFrame.value.contentWindow.postMessage({ type: 'init', apiURL: apiURL }, '*');
+};
+
+const handleVSCodeMessage = (event: MessageEvent) => {
+  if (event.data?.type === 'ready') {
+    isCodeEditorLoaded.value = true;
+  }
 };
 
 const startServer = async () => {
@@ -247,7 +254,7 @@ const disconnectConsole = (svName: string) => {
   console.log("disconnect console:", svName)
   ws.send(Message.create({
     type: MessageType.UNSUBSCRIBE,
-    unsubscribe: Unsubscribe.create({ id: svName })
+    unsubscribe: Unsubscribe.create({ topic: svName })
   }))
 }
 
@@ -292,49 +299,6 @@ const initWebsocket = () => {
   });
 }
 
-// Watch for server name changes
-watch(serverName, async (newName, oldName) => {
-  if (newName !== oldName) {
-    // 1. Disconnect old console
-    if (oldName && ws && ws.isConnected.value) {
-      disconnectConsole(oldName);
-    }
-
-    // 2. Reset state
-    isLoadingState.value = true;
-    serverState.value = null;
-    serverStatus.value = "unknown";
-    uptime.value = 0;
-    command.value = "";
-
-    // 3. Clear terminal
-    if (term) {
-      term.clear();
-    }
-
-    // 4. Fetch new state
-    await fetchServerState();
-
-    // 5. Connect new console
-    if (ws && ws.isConnected.value) {
-      connectConsole(newName);
-    }
-
-    // 6. Update VS Code frame if active
-    if (activeTab.value === 'code-editor' && vscodeFrame.value) {
-      // Force iframe reload by resetting src
-      isLoadingCodeEditor.value = true;
-      const currentSrc = vscodeFrame.value.src;
-      vscodeFrame.value.src = '';
-      setTimeout(() => {
-        if (vscodeFrame.value) {
-          vscodeFrame.value.src = currentSrc;
-        }
-      }, 0);
-    }
-  }
-});
-
 // Vue lifecycle
 onMounted(async () => {
   // Load server state first; if not found show 404 and bail out
@@ -355,11 +319,17 @@ onMounted(async () => {
       uptime.value++;
     }
   }, 1000);
+
+  // Listen for messages from VS Code iframe
+  window.addEventListener('message', handleVSCodeMessage);
 });
 
 onBeforeUnmount(() => {
   if (fetchStateTimer) clearInterval(fetchStateTimer);
   if (uptimeTimer) clearInterval(uptimeTimer);
+
+  // Remove message event listener VS Code iframe
+  window.removeEventListener('message', handleVSCodeMessage);
 
   disconnectConsole(serverName.value)
   resizeObserver.disconnect();
@@ -376,10 +346,56 @@ watch(() => route.query.tab, (newTab) => {
   if (activeTab.value === 'console' && fitAddon) {
     fitAddon.fit();
   }
-  if (activeTab.value === 'code-editor') {
-    isLoadingCodeEditor.value = true;
+  if (activeTab.value === 'code-editor' && !isCodeEditorLoaded.value) {
+    isShowCodeEditor.value = true;
   }
 }, { immediate: true });
+
+// Watch for server name changes
+watch(serverName, async (newName, oldName) => {
+  if (newName !== oldName) {
+    // 1. Disconnect old console
+    if (oldName && ws && ws.isConnected.value) {
+      disconnectConsole(oldName);
+    }
+
+    // 2. Reset state
+    isLoadingState.value = true;
+    serverState.value = null;
+    serverStatus.value = "unknown";
+    uptime.value = 0;
+    command.value = "";
+    isCodeEditorLoaded.value = false;
+    if (activeTab.value !== 'code-editor') {
+      isShowCodeEditor.value = false
+    }
+
+    // 3. Clear terminal
+    if (term) {
+      term.clear();
+    }
+
+    // 4. Fetch new state
+    await fetchServerState();
+
+    // 5. Connect new console
+    if (ws && ws.isConnected.value) {
+      connectConsole(newName);
+    }
+
+    // // 6. Update VS Code frame if active
+    if (activeTab.value === 'code-editor' && vscodeFrame.value) {
+      // Force iframe reload by resetting src
+      const currentSrc = vscodeFrame.value.src;
+      vscodeFrame.value.src = '';
+      setTimeout(() => {
+        if (vscodeFrame.value) {
+          vscodeFrame.value.src = currentSrc;
+        }
+      }, 0);
+    }
+  }
+});
 
 </script>
 <template>
@@ -404,10 +420,17 @@ watch(() => route.query.tab, (newTab) => {
             <div class="flex items-center gap-2" v-if="serverState?.ipAddress">
               <PhPlugIcon class="w-4 h-4 text-blue-500" weight="fill" />
               <span>IP: <strong class="text-gray-900 dark:text-white">{{ serverState.ipAddress }}</strong></span>
-              <button @click="copyText(serverState.ipAddress)"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <PhCopyIcon class="w-4 h-4" weight="bold" />
-              </button>
+              <div class="relative inline-block group">
+                <button @click="copyText(serverState.ipAddress)"
+                  class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                  <PhCopyIcon class="w-4 h-4" weight="bold" />
+                </button>
+                <div class="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs font-medium rounded-md whitespace-nowrap shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  Copy
+                  <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45">
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="flex items-center gap-2">
               <PhUsersThreeIcon class="w-4 h-4 text-indigo-500" weight="fill" />
@@ -573,7 +596,7 @@ watch(() => route.query.tab, (newTab) => {
         <!-- Code Editor Tab Content -->
         <div v-show="activeTab === 'code-editor'" class="h-[calc(100vh-200px)] relative">
           <!-- Loading Indicator -->
-          <div v-if="isLoadingCodeEditor"
+          <div v-if="!isCodeEditorLoaded"
             class="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-10">
             <div class="flex flex-col items-center gap-4">
               <div
@@ -582,8 +605,9 @@ watch(() => route.query.tab, (newTab) => {
               <p class="text-sm text-gray-600 dark:text-gray-400">Loading Code Editor...</p>
             </div>
           </div>
-          <iframe ref="vscodeFrame" src="/vscode/" class="h-full w-full border-0 rounded-lg"
-            @load="onFrameLoad"></iframe>
+          <iframe v-if="isShowCodeEditor" ref="vscodeFrame" @load="onFrameLoad" src="/vscode/"
+            class="h-full w-full border-0 rounded-lg">
+          </iframe>
         </div>
 
         <!-- File Manager Tab Content -->

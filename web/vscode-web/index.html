@@ -85,6 +85,10 @@
             trusted: true
           },
         });
+        
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'ready' }, '*');
+        }
       });
     }
 

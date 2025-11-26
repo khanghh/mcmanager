@@ -1,7 +1,4 @@
-import { useToast } from './useToast'
-
 export function useClipboard() {
-  const toast = useToast()
 
   const copyText = async (text: string): Promise<boolean> => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -10,7 +7,6 @@ export function useClipboard() {
         return true
       } catch (err) {
         console.error('Clipboard write failed:', err)
-        toast.error('Failed to copy to clipboard')
         return false
       }
     } else {
@@ -29,12 +25,11 @@ export function useClipboard() {
         if (success) {
           return true
         } else {
-          toast.error('Fallback copy failed')
+          console.error('Fallback copy failed')
           return false
         }
       } catch (err) {
         console.error('Fallback copy failed:', err)
-        toast.error('Failed to copy to clipboard')
         return false
       }
     }
