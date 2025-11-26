@@ -15,8 +15,9 @@ type feServerConfig struct {
 }
 
 type frontEndConfig struct {
+	UserEmail  string                 `json:"userEmail,omitempty"`
 	Servers    []feServerConfig       `json:"servers"`
-	VSCode     map[string]interface{} `json:"vscode"`
+	VSCode     map[string]interface{} `json:"vscode,omitempty"`
 	HasChanged bool                   `json:"hasChanged,omitempty"`
 }
 
@@ -34,9 +35,13 @@ func (h *AppConfigHandler) GetConfig(ctx *fiber.Ctx) error {
 			Icon: srv.Icon,
 		})
 	}
+
+	userEmail, _ := ctx.Locals(userEmailCtxKey).(string)
+
 	return ctx.JSON(APIResponse{
 		APIVersion: "1.0",
 		Data: &frontEndConfig{
+			UserEmail:  userEmail,
 			Servers:    servers,
 			VSCode:     h.config.VSCode(),
 			HasChanged: h.config.HasChanged(),

@@ -163,10 +163,10 @@ func run(cli *cli.Context) error {
 		AllowOrigins: "*",
 	}))
 	router.Static("/", staticDir)
-	router.Get("/ws", wsUpgradeRequired, wsServer.ServeFiberWS())
-	router.Get("/api/config", appConfigHandler.GetConfig)
+	router.Use(handlers.VerifyZeroTrustJWT(appConfig))
 	router.Post("/api/config", appConfigHandler.PostConfig)
-	router.All("/api/servers/:name/*", handlers.MCRunnerProxyHandler(runnerAPIURLs))
+	router.Get("/api/config", appConfigHandler.GetConfig)
+	router.Get("/ws", wsUpgradeRequired, wsServer.ServeFiberWS())
 	router.Post("/api/shutdown", func(ctx *fiber.Ctx) error {
 		go func() {
 			_ = wsServer.Shutdown()
@@ -175,6 +175,8 @@ func run(cli *cli.Context) error {
 		}()
 		return ctx.SendStatus(fiber.StatusOK)
 	})
+	router.All("/api/servers/:name/*", handlers.MCRunnerProxyHandler(runnerAPIURLs))
+
 	// SPA fallback: serve index.html for any non /ws or /api path
 	router.Get("/*", func(ctx *fiber.Ctx) error {
 		p := ctx.Path()

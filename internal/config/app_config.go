@@ -7,8 +7,14 @@ import (
 )
 
 type ConfigData struct {
-	Servers []ServerConfig         `yaml:"servers"`
-	VSCode  map[string]interface{} `yaml:"vscode"`
+	Servers     []ServerConfig         `yaml:"servers"`
+	VSCode      map[string]interface{} `yaml:"vscode"`
+	CFZeroTrust CFZeroTrustConfig      `yaml:"cfZeroTrust,omitempty"`
+}
+
+type CFZeroTrustConfig struct {
+	TeamDomain string `yaml:"teamDomain,omitempty"`
+	PolicyAUD  string `yaml:"policyAUD,omitempty"`
 }
 
 type ServerConfig struct {
@@ -31,6 +37,10 @@ func (c *AppConfig) Servers() []ServerConfig {
 
 func (c *AppConfig) VSCode() map[string]interface{} {
 	return c.configData.VSCode
+}
+
+func (c *AppConfig) CFZeroTrust() CFZeroTrustConfig {
+	return c.configData.CFZeroTrust
 }
 
 func (c *AppConfig) Value() *ConfigData {
