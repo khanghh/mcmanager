@@ -7,6 +7,8 @@ ARG GIT_TAG
 
 WORKDIR /workdir
 
+RUN apk add --no-cache git ca-certificates tzdata && update-ca-certificates
+
 COPY go.mod go.sum ./
 RUN go mod download
 
@@ -54,6 +56,8 @@ FROM scratch
 WORKDIR /app
 
 COPY --from=go-builder /workdir/manager /app/manager
+COPY --from=go-builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=web-builder /workdir/dist /app/dist
 COPY --from=vscode-builder /workdir/dist /app/dist/vscode
 
