@@ -56,7 +56,7 @@ const serverState: Ref<ServerState | null> = ref(null);
 const command: Ref<string> = ref("");
 const commandInput: Ref<HTMLInputElement | null> = ref(null);
 const connected: Ref<boolean> = ref(false);
-const autoScroll: Ref<boolean> = ref(true);
+const autoScroll: Ref<boolean> = ref(false);
 const serverStatus: Ref<string> = ref("unknown");
 const uptime: Ref<number> = ref(0);
 const activeTab = ref<TabType>('console');
@@ -254,7 +254,7 @@ const disconnectConsole = (svName: string) => {
   console.log("disconnect console:", svName)
   ws.send(Message.create({
     type: MessageType.UNSUBSCRIBE,
-    unsubscribe: Unsubscribe.create({ topic: svName })
+    unsubscribe: Unsubscribe.create({ topic: `server:${svName}` })
   }))
 }
 
@@ -295,6 +295,9 @@ const initWebsocket = () => {
     } else if (msg.type === MessageType.CMD_STATUS) {
       serverStatus.value = msg.cmdStatus.status;
       fetchServerState();
+      if (serverStatus.value === "running" ){
+        term.clear();
+      }
     }
   });
 }

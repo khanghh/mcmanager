@@ -90,6 +90,7 @@ func (m *MCRunnerClient) handleConsoleMessage(msg *pb.ConsoleMessage) {
 			switch statusCode {
 			case pb.Status_STATUS_RUNNING:
 				m.onStatus(RunnerStatusRunning)
+				m.buffer.Reset()
 			case pb.Status_STATUS_STOPPING:
 				m.onStatus(RunnerStatusStopping)
 			case pb.Status_STATUS_STOPPED:
