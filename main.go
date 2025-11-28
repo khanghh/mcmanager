@@ -154,9 +154,7 @@ func run(cli *cli.Context) error {
 	router := fiber.New(fiber.Config{
 		CaseSensitive: true,
 		BodyLimit:     params.ServerBodyLimit,
-		IdleTimeout:   params.ServerIdleTimeout,
-		ReadTimeout:   params.ServerReadTimeout,
-		WriteTimeout:  params.ServerWriteTimeout,
+		ErrorHandler:  handlers.ErrorHandler,
 	})
 	router.Use(logger.New())
 	router.Use(cors.New(cors.Config{

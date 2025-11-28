@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gofiber/fiber/v2"
@@ -13,8 +14,64 @@ const (
 	userEmailCtxKey = "user_email"
 )
 
+func isPrivateIP(ipStr string) bool {
+	// Remove port if present
+	host, _, err := net.SplitHostPort(ipStr)
+	if err != nil {
+		host = ipStr
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+
+	// Check for loopback
+	if ip.IsLoopback() {
+		return true
+	}
+
+	// Check for private IP ranges
+	privateRanges := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+	}
+
+	for _, cidr := range privateRanges {
+		_, block, _ := net.ParseCIDR(cidr)
+		if block.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func getClientIP(c *fiber.Ctx) string {
+	clientIP := c.Get("Cf-Connecting-Ip")
+	if clientIP != "" {
+		return clientIP
+	}
+	clientIP = c.Get("X-Forwarded-For")
+	if clientIP != "" {
+		// In case of multiple IPs, take the first one
+		if idx := len(clientIP); idx != -1 {
+			clientIP = clientIP[:idx]
+		}
+		return clientIP
+	}
+	return c.IP()
+}
+
 func VerifyZeroTrustJWT(appConfig *config.AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// Skip verification for private IP addresses
+		clientIP := getClientIP(c)
+		if isPrivateIP(clientIP) {
+			return c.Next()
+		}
+
 		cfConfig := appConfig.Value().CFZeroTrust
 
 		// Check if Zero Trust is configured

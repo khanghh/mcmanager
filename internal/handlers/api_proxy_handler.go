@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/proxy"
+	"github.com/khanghh/mcmanager/internal/handlers/proxy"
 )
 
 func MCRunnerProxyHandler(apiURLs map[string]string) fiber.Handler {
@@ -26,6 +26,7 @@ func MCRunnerProxyHandler(apiURLs map[string]string) fiber.Handler {
 		if queryString := string(ctx.Request().URI().QueryString()); queryString != "" {
 			fullURL = fullURL + "?" + queryString
 		}
+		fmt.Printf("Proxy %s %s\n", ctx.Method(), fullURL)
 		return proxy.Do(ctx, fullURL)
 	}
 }
