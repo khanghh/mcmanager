@@ -51,14 +51,22 @@ COPY --chown=node:node ./web .
 RUN pnpm install && pnpm run build
 
 # ---- Runtime stage ----
-FROM scratch
+FROM alpine:latest
 
 WORKDIR /app
+
+ENV TZ=Asia/Ho_Chi_Minh
+
+RUN apk add --no-cache libc6-compat
 
 COPY --from=go-builder /workdir/manager /app/manager
 COPY --from=go-builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=web-builder /workdir/dist /app/dist
 COPY --from=vscode-builder /workdir/dist /app/dist/vscode
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+EXPOSE 8080
 
 ENTRYPOINT ["/app/manager"]
