@@ -18,11 +18,33 @@ import {
 } from 'vscode';
 import axios from 'axios';
 
+export class FileEntry implements FileStat {
+
+  name: string;
+  type: FileType;
+  ctime: number;
+  mtime: number;
+  size: number;
+  entries: Array<FileEntry>; // directory entries
+
+  constructor(public uri: Uri, name: string) {
+    this.name = name;
+    this.type = FileType.File;
+    this.ctime = Date.now();
+    this.mtime = Date.now();
+    this.size = 0;
+    this.entries = [];
+  }
+}
+
+const decoder = new TextDecoder('utf-8');
+
 export class RemoteFS implements FileSystemProvider {
   static scheme = 'remotefs';
 
-  private readonly disposable: Disposable;
-  private apiAxios;
+  private readonly apiAxios;
+  private readonly statCache: Record<string, FileStat> = Object.create(null);
+
 
   constructor(serverURL: string) {
     const apiURL = serverURL.replace(/\/$/, '');
@@ -30,60 +52,83 @@ export class RemoteFS implements FileSystemProvider {
       baseURL: apiURL,
       validateStatus: () => true,
     });
-    this.disposable = Disposable.from(
-      workspace.registerFileSystemProvider(RemoteFS.scheme, this, { isCaseSensitive: true }),
-    );
+
   }
 
   updateServerURL(newURL: string) {
     this.apiAxios.defaults.baseURL = newURL.replace(/\/$/, '');
   }
 
-  dispose() {
-    this.disposable?.dispose();
-  }
-
   // --- manage file metadata
 
   async stat(uri: Uri): Promise<FileStat> {
+    console.log('stat', uri.toString());
     const path = uri.path.substring(1); // remove leading /
-    const response = await this.apiAxios.get(path, {
-      params: { stat: "true" },
-    });
-    if (response.status < 200 || response.status >= 300) {
-      throw this.mapError(response);
+    const response = await this.apiAxios.get(`/stat?path=${path}`);
+    if (response.status !== 200) {
+      throw this.mapError(response.status, response.data);
     }
-    const data = response.data;
-    return {
+    const respData = response.data;
+    if (!respData || !respData.data) {
+      throw new FileSystemError()
+    }
+    const data = respData.data;
+    const stat: FileStat = {
       type: data.type as FileType,
-      ctime: Date.parse(data.lastModified),
-      mtime: Date.parse(data.lastModified),
+      ctime: data.ctime,
+      mtime: data.mtime,
       size: data.size,
     };
+    this.statCache[uri.toString()] = data;
+    return stat;
   }
 
   async readDirectory(uri: Uri): Promise<[string, FileType][]> {
-    const path = uri.path.substring(1);
-    const response = await this.apiAxios.get(path);
-    if (response.status < 200 || response.status >= 300) {
-      throw this.mapError(response);
+    const fileStat = this.statCache[uri.toString()];
+    if (fileStat && fileStat.type !== FileType.Directory) {
+      throw FileSystemError.FileNotADirectory(uri);
     }
-    const data: any[] = response.data;
-    return data.map(item => [item.name, item.type] as [string, FileType]);
+    console.log('readDirectory', uri.toString());
+    const path = uri.path.substring(1);
+    const response = await this.apiAxios.get(`/stat?path=${path}`);
+    if (response.status < 200 || response.status >= 300) {
+      throw this.mapError(response.status, response.data);
+    }
+    const repsData = response.data;
+    if (!repsData || !repsData.data) {
+      throw FileSystemError.Unavailable(uri)
+    }
+    const dirStat: FileEntry = repsData.data;
+    if (dirStat.type !== FileType.Directory) {
+      throw FileSystemError.FileNotADirectory(uri);
+    }
+    return dirStat.entries.map(item => [item.name, item.type] as [string, FileType]);
   }
 
   // --- manage file contents
 
   async readFile(uri: Uri): Promise<Uint8Array> {
-    const path = uri.path.substring(1);
-    const response = await this.apiAxios.get(path);
-    if (response.status < 200 || response.status >= 300) {
-      throw this.mapError(response);
+    const fileStat = this.statCache[uri.toString()];
+    if (fileStat && fileStat.type === FileType.Directory) {
+      throw FileSystemError.FileIsADirectory(uri);
     }
-    return new TextEncoder().encode(response.data);
+    const filteredExtensions = ["jar", "so", "mca", "zip", "rar", "gz", "pack"];
+    if (filteredExtensions.some(ext => uri.path.endsWith(`.${ext}`))) {
+      return new Uint8Array([0x50,0x4b,0x03,0x04,0x14,0x00,0x08,0x08,0x08,0x00,0x1a,0x8d,0x93,0x4e,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x09,0x00,0x04,0x00,0x4d,0x45,0x54,0x41,0x2d,0x49,0x4e,0x46,0x2f,0xfe,0xca,0x00,0x00,0x03,0x00,0x50,0x4b,0x07,0x08,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x50,0x4b,0x03,0x04,0x14,0x00,0x08,0x08,0x08,0x00,0x19,0x8d,0x93,0x4e,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x14,0x00,0x00,0x00,0x4d,0x45,0x54,0x41,0x2d,0x49,0x4e,0x46,0x2f]); // dummy data
+    }
+    console.log('readFile', uri.toString());
+    const path = uri.path.substring(1);
+    const response = await this.apiAxios.get(`/files/${path}?raw=true`, {
+      responseType: 'arraybuffer',
+    });
+    if (response.status !== 200) {
+      throw this.mapError(response.status, response.data);
+    }
+    return new Uint8Array(response.data);
   }
 
   async writeFile(uri: Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }): Promise<void> {
+    console.log('writeFile', uri.toString());
     const path = uri.path.substring(1);
     const parts = path.split('/');
     const fileName = parts.pop() || '';
@@ -107,22 +152,22 @@ export class RemoteFS implements FileSystemProvider {
         if (options.overwrite) {
           body.overwrite = true;
         }
-        response = await this.apiAxios.post(parent, body, {
+        response = await this.apiAxios.post(`/files/${parent}`, body, {
           headers: { 'Content-Type': 'application/json' },
         });
       }
       if (response.status !== axios.HttpStatusCode.Created) {
-        throw this.mapError(response);
+      throw this.mapError(response.status, response.data);
       }
       return this._fireSoon({ type: FileChangeType.Created, uri });
     }
 
     // default, use PUT to write content to file path
-    const response = await this.apiAxios.put(path, buffer, {
+    const response = await this.apiAxios.put(`/files/${path}`, buffer, {
       headers: { 'Content-Type': 'application/octet-stream' },
     });
-    if (response.status < 200 || response.status >= 300) {
-      throw this.mapError(response);
+    if (response.status !== 201) {
+      throw this.mapError(response.status, response.data);
     }
     return this._fireSoon({ type: FileChangeType.Changed, uri });
   }
@@ -132,11 +177,11 @@ export class RemoteFS implements FileSystemProvider {
   async rename(oldUri: Uri, newUri: Uri, options: { overwrite: boolean }): Promise<void> {
     const oldPath = oldUri.path.substring(1);
     const newName = newUri.path.substring(1);
-    const response = await this.apiAxios.patch(oldPath, { newPath: newName, overwrite: options.overwrite }, {
+    const response = await this.apiAxios.patch(`/files/${oldPath}`, { newPath: newName, overwrite: options.overwrite }, {
       headers: { 'Content-Type': 'application/json' },
     });
-    if (response.status < 200 || response.status >= 300) {
-      throw this.mapError(response);
+    if (response.status !== 200) {
+      throw this.mapError(response.status, response.data);
     }
     this._fireSoon(
       { type: FileChangeType.Deleted, uri: oldUri },
@@ -146,11 +191,11 @@ export class RemoteFS implements FileSystemProvider {
 
   async delete(uri: Uri, opts: { recursive: boolean, useTrash: boolean }): Promise<void> {
     const path = uri.path.substring(1);
-    const response = await this.apiAxios.delete(path, {
+    const response = await this.apiAxios.delete(`/files/${path}`, {
       params: { recursive: opts.recursive },
     });
-    if (response.status < 200 || response.status >= 300) {
-      throw this.mapError(response);
+    if (response.status !== 200) {
+      throw this.mapError(response.status, response.data);
     }
     this._fireSoon({ uri, type: FileChangeType.Deleted });
   }
@@ -159,11 +204,11 @@ export class RemoteFS implements FileSystemProvider {
     const basename = this._basename(uri.path);
     const parent = this._dirname(uri.path);
     const body = { path: basename, type: 'directory' };
-    const response = await this.apiAxios.post(parent, body, {
+    const response = await this.apiAxios.post(`/files/${parent}`, body, {
       headers: { 'Content-Type': 'application/json' },
     });
-    if (response.status < 200 || response.status >= 300) {
-      throw this.mapError(response);
+    if (response.status !== 201) {
+      throw this.mapError(response.status, response.data);
     }
     this._fireSoon({ type: FileChangeType.Created, uri });
   }
@@ -178,9 +223,7 @@ export class RemoteFS implements FileSystemProvider {
 
   watch(_resource: Uri): Disposable {
     // ignore, fires for all changes...
-    return new Disposable(() => {
-      this._bufferedEvents = [];
-    });
+    return new Disposable(() => { });
   }
 
   private _fireSoon(...events: FileChangeEvent[]): void {
@@ -196,13 +239,13 @@ export class RemoteFS implements FileSystemProvider {
     }, 5);
   }
 
-  private mapError(response: any): Error {
+  private mapError(status: number, respData: any): Error {
     let error;
-    const data = response?.data;
-    if (data && data instanceof ArrayBuffer) {
-      error = new TextDecoder().decode(new Uint8Array(data));
+    if (respData instanceof ArrayBuffer) {
+      const jsonData = JSON.parse(decoder.decode(respData));
+      error = jsonData?.error;
     } else {
-      error = data.error;
+      error = respData?.error;
     }
 
     const reason = error?.reason ?? '';
@@ -218,24 +261,22 @@ export class RemoteFS implements FileSystemProvider {
         return FileSystemError.NoPermissions();
     }
 
-    if (response?.status === 500) {
+    if (status === 500) {
       return new Error('Internal server error');
     }
 
-    const message = error?.message ?? response?.statusText ?? 'Unknown error';
+    const message = error?.message ?? 'Unknown error';
     return new Error(message);
   }
 
-
   // --- path utils
-
   private _basename(path: string): string {
     path = this._rtrim(path, '/');
     if (!path) {
       return '';
     }
 
-    return path.substr(path.lastIndexOf('/') + 1);
+    return path.substring(path.lastIndexOf('/') + 1);
   }
 
   private _dirname(path: string): string {
@@ -244,7 +285,7 @@ export class RemoteFS implements FileSystemProvider {
       return '/';
     }
 
-    return path.substr(0, path.lastIndexOf('/'));
+    return path.substring(0, path.lastIndexOf('/'));
   }
 
   private _rtrim(haystack: string, needle: string): string {

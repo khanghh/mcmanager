@@ -16,6 +16,14 @@ export type ApiResponse<T> = {
 
 export type ServerStatus = 'running' | 'stopping' | 'stopped' | 'unknown'
 
+export type ServerInfo = {
+  name: string
+  version: string
+  tps: Array<number>
+  playersOnline: number
+  playersMax: number
+}
+
 export type ServerState = {
   status: ServerStatus
   tps: number
@@ -28,6 +36,7 @@ export type ServerState = {
   uptimeSec?: number
   diskUsage?: number
   diskSize?: number
+  server?: ServerInfo
 }
 
 export type CommandRequest = {

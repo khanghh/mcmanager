@@ -28,7 +28,7 @@ async function initializeApp() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   let wsUrl = `${protocol}//${window.location.host}/ws`;
   if (import.meta.env.DEV) {
-    wsUrl = 'ws://localhost:8081/ws';
+    wsUrl = 'ws://localhost:8080/ws';
   }
   await initWebsocket(wsUrl);
 

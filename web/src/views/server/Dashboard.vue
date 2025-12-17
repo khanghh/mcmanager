@@ -25,7 +25,6 @@ import {
   PhTrashIcon,
   PhPaperPlaneRightIcon,
   PhUsersThreeIcon,
-  PhClockIcon,
   PhTerminalIcon,
   PhCodeIcon,
   PhFolderIcon,
@@ -34,8 +33,8 @@ import {
   PhGearIcon,
   PhCopyIcon,
   PhPuzzlePieceIcon,
-  PhCheckIcon,
 } from "@/icons";
+import { PhChartLine } from "@phosphor-icons/vue";
 
 // composable variables
 const route = useRoute();
@@ -78,7 +77,9 @@ const breadcrumbPath = computed(() => ["servers", serverName.value, "Server Cons
 const isStopped = computed(() => serverState.value?.status === "stopped" || serverState.value?.status === "unknown");
 const isRunning = computed(() => serverState.value && serverState.value.status === "running");
 const cpuCount = computed(() => serverState.value?.cpuLimit);
-const formattedUptime = computed(() => formatUptime(uptime.value));
+const playersOnline = computed(() => serverState.value?.server?.playersOnline || 0);
+const playersMax = computed(() => serverState.value?.server?.playersMax || 0);
+const formattedTps = computed(() => (serverState.value?.server?.tps?.[0] || 0).toFixed(2));
 
 const statusBadgeVariant = computed(() => {
   if (!serverStatus.value) return "secondary";
@@ -439,13 +440,13 @@ watch(serverName, async (newName, oldName) => {
               <PhUsersThreeIcon class="w-4 h-4 text-indigo-500" weight="fill" />
               <span>Online:
                 <strong class="text-gray-900 dark:text-white">
-                  {{ isRunning ? '0 / 0' : '0 / 0' }}
+                  {{ playersOnline }} / {{ playersMax }}
                 </strong>
               </span>
             </div>
             <div class="flex items-center gap-2">
-              <PhClockIcon class="w-4 h-4 text-purple-500" weight="fill" />
-              <span>Uptime: <strong class="text-gray-900 dark:text-white">{{ formattedUptime }}</strong></span>
+              <PhChartLine class="w-4 h-4 text-purple-500" weight="fill" />
+              <span>TPS: <strong class="text-gray-900 dark:text-white">{{ formattedTps}}</strong></span>
             </div>
           </div>
         </div>

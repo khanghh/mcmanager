@@ -26,10 +26,10 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('RemoteFS server URL:', serverURL);
 
     // Initialize RemoteFS with the configured server URL
-    const remoteFs = enableFs(context, serverURL);
+    const remoteFs = new RemoteFS(serverURL);
 
-    // Listen for configuration changes
     context.subscriptions.push(
+      // Listen for configuration changes
       vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('remotefs')) {
           const updatedConfig = vscode.workspace.getConfiguration('remotefs');
@@ -37,15 +37,9 @@ export function activate(context: vscode.ExtensionContext) {
           console.log('RemoteFS server URL:', newServerURL);
           remoteFs.updateServerURL(newServerURL);
         }
-      })
+      }),
+      vscode.workspace.registerFileSystemProvider(RemoteFS.scheme, remoteFs, { isCaseSensitive: true }),
     );
   }
   context.messagePassingProtocol?.postMessage({ type: "ready" });
-}
-
-function enableFs(context: vscode.ExtensionContext, serverURL: string): RemoteFS {
-  const remoteFs = new RemoteFS(serverURL);
-  context.subscriptions.push(remoteFs);
-
-  return remoteFs;
 }
