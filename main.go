@@ -114,13 +114,13 @@ func initWebsocketServer(managerHandler *handlers.MCManagerHandler) *websocket.S
 }
 
 func mustInitMCManagerService(servers []config.ServerConfig) *manager.MCManagerService {
-	runners := make(map[string]*manager.MCRunnerClient)
-	for _, sv := range servers {
-		runner, err := manager.NewMCRunnerClient(sv.Name, sv.GRPCAddr)
+	runners := make([]*manager.MCRunnerClient, len(servers))
+	for idx, sv := range servers {
+		runner, err := manager.NewMCRunnerClient(sv.Name, sv.GRPCURL)
 		if err != nil {
 			log.Fatalf("could not initialize MCRunner %q: %v", sv.Name, err)
 		}
-		runners[strings.ToLower(sv.Name)] = runner
+		runners[idx] = runner
 	}
 	return manager.NewMCManagerService(runners)
 }
@@ -164,16 +164,8 @@ func run(cli *cli.Context) error {
 	router.Use(handlers.VerifyZeroTrustJWT(appConfig))
 	router.Post("/api/config", appConfigHandler.PostConfig)
 	router.Get("/api/config", appConfigHandler.GetConfig)
-	router.Get("/ws", wsUpgradeRequired, wsServer.ServeFiberWS())
-	router.Post("/api/shutdown", func(ctx *fiber.Ctx) error {
-		go func() {
-			_ = wsServer.Shutdown()
-			_ = router.Shutdown()
-			os.Exit(1)
-		}()
-		return ctx.SendStatus(fiber.StatusOK)
-	})
 	router.All("/api/servers/:name/*", handlers.MCRunnerProxyHandler(runnerAPIURLs))
+	router.Get("/ws", wsUpgradeRequired, wsServer.ServeFiberWS())
 
 	// SPA fallback: serve index.html for any non /ws or /api path
 	router.Get("/*", func(ctx *fiber.Ctx) error {

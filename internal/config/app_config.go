@@ -18,10 +18,11 @@ type CFZeroTrustConfig struct {
 }
 
 type ServerConfig struct {
-	Name     string `yaml:"name"`
-	Icon     string `yaml:"icon"`
-	APIURL   string `yaml:"apiURL"`
-	GRPCAddr string `yaml:"grpcURL"`
+	Name    string `yaml:"name"`
+	Icon    string `yaml:"icon"`
+	LogoURL string `yaml:"logoURL"`
+	APIURL  string `yaml:"apiURL"`
+	GRPCURL string `yaml:"grpcURL"`
 }
 
 type AppConfig struct {

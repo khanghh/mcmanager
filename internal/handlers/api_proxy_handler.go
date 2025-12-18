@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/khanghh/mcmanager/internal/handlers/proxy"
+	"github.com/gofiber/fiber/v2/middleware/proxy"
 )
 
 func MCRunnerProxyHandler(apiURLs map[string]string) fiber.Handler {

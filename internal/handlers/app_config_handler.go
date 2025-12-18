@@ -10,8 +10,9 @@ type AppConfigHandler struct {
 }
 
 type feServerConfig struct {
-	Name string `json:"name"`
-	Icon string `json:"icon"`
+	Name    string `json:"name"`
+	Icon    string `json:"icon"`
+	LogoURL string `json:"logoUrl,omitempty"`
 }
 
 type frontEndConfig struct {
@@ -31,8 +32,9 @@ func (h *AppConfigHandler) GetConfig(ctx *fiber.Ctx) error {
 	servers := []feServerConfig{}
 	for _, srv := range h.config.Servers() {
 		servers = append(servers, feServerConfig{
-			Name: srv.Name,
-			Icon: srv.Icon,
+			Name:    srv.Name,
+			Icon:    srv.Icon,
+			LogoURL: srv.LogoURL,
 		})
 	}
 

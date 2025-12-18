@@ -11,23 +11,20 @@ var (
 )
 
 type MCManagerService struct {
-	runners map[string]*MCRunnerClient
+	runners []*MCRunnerClient
 }
 
 func (s *MCManagerService) GetRunner(name string) (*MCRunnerClient, error) {
-	runner, ok := s.runners[name]
-	if !ok {
-		return nil, ErrRunnerNotExist
+	for _, runner := range s.runners {
+		if runner.Name() == name {
+			return runner, nil
+		}
 	}
-	return runner, nil
+	return nil, nil
 }
 
 func (s *MCManagerService) Runners() []*MCRunnerClient {
-	runnerList := make([]*MCRunnerClient, 0, len(s.runners))
-	for _, runner := range s.runners {
-		runnerList = append(runnerList, runner)
-	}
-	return runnerList
+	return s.runners
 }
 
 func (s *MCManagerService) StopAll() error {
@@ -51,7 +48,7 @@ func (s *MCManagerService) StopAll() error {
 	return <-errCh
 }
 
-func NewMCManagerService(runners map[string]*MCRunnerClient) *MCManagerService {
+func NewMCManagerService(runners []*MCRunnerClient) *MCManagerService {
 	return &MCManagerService{
 		runners: runners,
 	}

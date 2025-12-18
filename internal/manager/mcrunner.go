@@ -28,6 +28,10 @@ type MCRunnerClient struct {
 	closed       chan struct{}
 }
 
+func (m *MCRunnerClient) ServerState() *ServerState {
+	return m.state
+}
+
 func (m *MCRunnerClient) Name() string {
 	return m.name
 }
