@@ -35,6 +35,7 @@ import {
   PhPuzzlePieceIcon,
 } from "@/icons";
 import { PhChartLine } from "@phosphor-icons/vue";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 // composable variables
 const route = useRoute();
@@ -42,6 +43,7 @@ const api = useApi();
 const toast = useToast();
 const router = useRouter();
 const { copyText } = useClipboard();
+const confirmDialog = useConfirmDialog();
 
 // constants
 const serverName = computed(() => (route.params.name as string) || route.path.split('/')[2]);
@@ -197,31 +199,54 @@ const startServer = async () => {
 };
 
 const stopServer = async () => {
-  try {
-    serverStatus.value = "stopping";
-    await api.stopServer(serverName.value);
-    toast.info(`${serverName.value} has been stopped`);
-  } catch (err: ApiError | unknown) {
-    toast.error(`Failed to stop server ${serverName.value}: ${(err as ApiError)?.message || err}`)
-  }
+  confirmDialog.show({
+    title: 'Are you sure you want to stop this server?',
+    message: 'Server will be stopped gracefully',
+    confirmText: 'Stop Server',
+    onConfirm: async () => {
+      try {
+        serverStatus.value = "stopping";
+        await api.stopServer(serverName.value);
+        toast.info(`${serverName.value} has been stopped`);
+      } catch (err: ApiError | unknown) {
+        toast.error(`Failed to stop server ${serverName.value}: ${(err as ApiError)?.message || err}`)
+      }
+    },
+  });
 };
 
 const restartServer = async () => {
-  try {
-    await api.restartServer(serverName.value);
-    toast.info(`${serverName.value} has been restarted`);
-  } catch (err: ApiError | unknown) {
-    toast.error(`Failed to restart server ${serverName.value}: ${(err as ApiError)?.message || err}`)
-  }
+  confirmDialog.show({
+    title: 'Are you sure you want to restart this server?',
+    message: 'Restarting will stop and then start the server again.',
+    confirmText: 'Restart Server',
+    variant: 'info',
+    onConfirm: async () => {
+      try {
+        await api.restartServer(serverName.value);
+        toast.info(`${serverName.value} has been restarted`);
+      } catch (err: ApiError | unknown) {
+        toast.error(`Failed to restart server ${serverName.value}: ${(err as ApiError)?.message || err}`)
+      }
+    },
+  });
 };
 
-const killServer = async () => {
-  try {
-    await api.killServer(serverName.value);
-    toast.info(`${serverName.value} has been stopped`);
-  } catch (err: ApiError | unknown) {
-    toast.error(`Failed to kill server ${serverName.value}: ${(err as ApiError)?.message || err}`)
-  }
+const killServer = () => {
+  confirmDialog.show({
+    title: 'Are you sure you want to kill this server?',
+    message: 'Killing the server may cause data corruption. Try stopping the server if it is running normally."',
+    confirmText: 'Kill Server',
+    variant: 'warning',
+    onConfirm: async () => {
+      try {
+        await api.killServer(serverName.value);
+        toast.info(`${serverName.value} has been stopped`);
+      } catch (err: ApiError | unknown) {
+        toast.error(`Failed to kill server ${serverName.value}: ${(err as ApiError)?.message || err}`)
+      }
+    },
+  });
 };
 
 const sendCommand = async () => {

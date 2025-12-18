@@ -1,5 +1,6 @@
 <template>
   <ThemeProvider>
+    <ConfirmDialog />
     <SidebarProvider>
       <RouterView />
     </SidebarProvider>
@@ -11,4 +12,5 @@
 import ThemeProvider from './components/layout/ThemeProvider.vue'
 import SidebarProvider from './components/layout/SidebarProvider.vue'
 import Toast from './components/ui/Toast.vue'
+import ConfirmDialog from './components/ui/ConfirmDialog.vue'
 </script>
