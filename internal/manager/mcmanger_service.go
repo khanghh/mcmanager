@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -16,11 +17,11 @@ type MCManagerService struct {
 
 func (s *MCManagerService) GetRunner(name string) (*MCRunnerClient, error) {
 	for _, runner := range s.runners {
-		if runner.Name() == name {
+		if strings.EqualFold(runner.Name(), name) {
 			return runner, nil
 		}
 	}
-	return nil, nil
+	return nil, ErrRunnerNotExist
 }
 
 func (s *MCManagerService) Runners() []*MCRunnerClient {
